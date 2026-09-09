@@ -12,6 +12,12 @@ const supabase = isConfigured ? createClient(cfg.SUPABASE_URL, cfg.SUPABASE_ANON
   }
 }) : null;
 const TBY_SITE_URL = 'https://tranminhnhan4547-eng.github.io/tby-badminton/';
+
+function updateOwnerPasswordVisibility(){
+  const sec=document.getElementById('ownerPasswordSection');
+  if(!sec)return;
+  sec.hidden=currentAdminRole!=='owner';
+}
 const $ = s => document.querySelector(s);
 const esc = (v='') => String(v).replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
 const fmtDate = d => new Intl.DateTimeFormat('vi-VN',{weekday:'short',day:'2-digit',month:'2-digit',year:'numeric'}).format(new Date(d+'T00:00:00'));
@@ -100,7 +106,7 @@ document.querySelectorAll('[data-close]').forEach(b=>b.addEventListener('click',
 $('#refreshBtn').addEventListener('click',loadEvents);$('#adminRefreshBtn').addEventListener('click',loadAdminEvents);$('#adminBtn').addEventListener('click',async()=>{if(!supabase)return alert('Hãy cấu hình Supabase trước.');$('#adminDialog').showModal();await syncAuth();});
 
 async function syncAuth(){
-  const {data:{user}}=await supabase.auth.getUser();currentAdminUser=null;currentAdminRole=null;
+  const {data:{user}}=await supabase.auth.getUser();currentAdminUser=null;currentAdminRole=null;updateOwnerPasswordVisibility();
   $('#authPane').hidden=!!user;$('#adminPane').hidden=true;$('#notAdminPane').hidden=true;$('#ownerSection').hidden=true;$('#siteSettingsSection').hidden=true;$('#videoAdminSection').hidden=true;
   if(!user)return;
   const {data:adminRow}=await supabase.from('admin_users').select('user_id,role').eq('user_id',user.id).maybeSingle();
@@ -577,3 +583,43 @@ $('#siteSettingsForm').addEventListener('submit',async ev=>{ev.preventDefault();
 
 await recoverMobileAuthSession();
 await Promise.all([loadSiteSettings(),loadEvents(),loadTeamVideos()]);
+
+
+document.getElementById('ownerPasswordForm')?.addEventListener('submit',async ev=>{
+  ev.preventDefault();
+  const m=document.getElementById('ownerPasswordMsg');
+  const p1=document.getElementById('ownerNewPassword')?.value||'';
+  const p2=document.getElementById('ownerNewPassword2')?.value||'';
+
+  if(currentAdminRole!=='owner'){
+    m.className='form-msg err';
+    m.textContent='Chỉ Owner được đổi mật khẩu tại đây.';
+    return;
+  }
+  if(p1.length<6){
+    m.className='form-msg err';
+    m.textContent='Mật khẩu cần ít nhất 6 ký tự.';
+    return;
+  }
+  if(p1!==p2){
+    m.className='form-msg err';
+    m.textContent='Hai mật khẩu chưa giống nhau.';
+    return;
+  }
+
+  m.className='form-msg';
+  m.textContent='Đang lưu mật khẩu…';
+
+  const {error}=await supabase.auth.updateUser({password:p1});
+  if(error){
+    m.className='form-msg err';
+    m.textContent=error.message||'Không đổi được mật khẩu.';
+    return;
+  }
+
+  document.getElementById('ownerNewPassword').value='';
+  document.getElementById('ownerNewPassword2').value='';
+  m.className='form-msg ok';
+  m.textContent='Đã đặt mật khẩu mới. Từ giờ bạn có thể đăng nhập bằng email + mật khẩu trên điện thoại và PC.';
+});
+

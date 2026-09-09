@@ -28,3 +28,10 @@
   .auth-tabs{position:sticky;top:0;background:#fff;z-index:2}
   .auth-form input{font-size:16px}
 }
+
+#ownerPasswordSection{margin-top:18px}
+#ownerPasswordSection .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+#ownerPasswordSection .full-btn,#ownerPasswordSection .full{grid-column:1/-1}
+@media(max-width:640px){
+  #ownerPasswordSection .form-grid{grid-template-columns:1fr}
+}

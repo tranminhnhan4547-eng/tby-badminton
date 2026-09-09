@@ -178,7 +178,28 @@
         </section>
 
 
-        <section id="videoAdminSection" class="admin-manage-section" hidden>
+        
+        <section id="ownerPasswordSection" class="admin-card owner-only" hidden>
+          <div class="admin-section-head">
+            <div>
+              <div class="eyebrow">BẢO MẬT OWNER</div>
+              <h3>Đặt mật khẩu đăng nhập</h3>
+            </div>
+          </div>
+          <p class="muted">Dùng mật khẩu này để đăng nhập TBY trên điện thoại/PC mà không cần Magic Link.</p>
+          <form id="ownerPasswordForm" class="form-grid">
+            <label>Mật khẩu mới *
+              <input id="ownerNewPassword" type="password" minlength="6" autocomplete="new-password" required />
+            </label>
+            <label>Nhập lại mật khẩu *
+              <input id="ownerNewPassword2" type="password" minlength="6" autocomplete="new-password" required />
+            </label>
+            <button class="btn btn-primary full-btn" type="submit">Lưu mật khẩu mới</button>
+            <div id="ownerPasswordMsg" class="form-msg full"></div>
+          </form>
+        </section>
+
+<section id="videoAdminSection" class="admin-manage-section" hidden>
           <div class="admin-manage-head"><div><span class="kicker">OWNER</span><h3>Quản lý Video TBY</h3></div><button id="videoAdminRefreshBtn" class="btn btn-ghost btn-sm" type="button">↻ Cập nhật</button></div>
           <p class="muted admin-note">Chỉ Owner được upload/xóa/ẩn video. Nên dùng MP4 dọc 9:16, tối đa 50 MB.</p>
           <form id="videoUploadForm" class="form-grid admin-form">
