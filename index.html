@@ -91,7 +91,12 @@
       <div class="dialog-head"><div><span class="kicker">QUẢN TRỊ</span><h2>TBY Admin</h2></div><button type="button" class="icon-btn" data-close="adminDialog">×</button></div>
 
       <div id="authPane">
-        <p class="muted"><b>Đăng nhập dễ hơn trên điện thoại:</b> dùng email + mật khẩu. Magic Link chỉ là phương án dự phòng.</p>
+        <div class="mobile-auth-guide">
+          <b>Đăng nhập trên điện thoại</b>
+          <span>1. Tạo tài khoản bằng email + mật khẩu.</span>
+          <span>2. Nếu có email xác nhận, bấm xác nhận 1 lần.</span>
+          <span>3. Quay lại TBY và đăng nhập bằng email + mật khẩu.</span>
+        </div>
         <div class="auth-tabs">
           <button type="button" class="auth-tab active" data-auth-mode="login">Đăng nhập</button>
           <button type="button" class="auth-tab" data-auth-mode="signup">Tạo tài khoản</button>
@@ -106,6 +111,7 @@
           <label>Mật khẩu<input id="signupPassword" type="password" minlength="6" required autocomplete="new-password" placeholder="Tối thiểu 6 ký tự"/></label>
           <label>Nhập lại mật khẩu<input id="signupPassword2" type="password" minlength="6" required autocomplete="new-password" placeholder="Nhập lại mật khẩu"/></label>
           <button class="btn btn-primary full-btn" type="submit">Tạo tài khoản quản lý</button>
+          <button id="signupToLoginBtn" class="btn btn-ghost full-btn" type="button">Tôi đã xác nhận email → Đăng nhập</button>
         </form>
         <div class="magic-fallback">
           <span class="muted">Không nhớ mật khẩu hoặc muốn dùng link?</span>

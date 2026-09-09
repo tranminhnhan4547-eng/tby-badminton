@@ -18,3 +18,13 @@
 .video-source-badge{position:absolute;left:10px;top:10px;z-index:3;padding:6px 9px;border-radius:999px;background:#0009;color:#fff;font-size:10px;font-weight:800;letter-spacing:.08em;backdrop-filter:blur(8px)}
 .video-platform-preview{width:100%;height:100%;display:grid;place-items:center;background:#07131f;color:#fff;font-size:10px;font-weight:800;text-align:center;padding:4px}
 #videoLinkWrap small,#videoFileWrap small{line-height:1.45}
+
+.mobile-auth-guide{
+  display:grid;gap:5px;margin:8px 0 14px;padding:12px 14px;border-radius:14px;
+  background:#eef6ff;border:1px solid #cfe1f5;color:#31516f;font-size:13px;line-height:1.4
+}
+.mobile-auth-guide b{color:#07559b;font-size:14px}
+@media(max-width:640px){
+  .auth-tabs{position:sticky;top:0;background:#fff;z-index:2}
+  .auth-form input{font-size:16px}
+}

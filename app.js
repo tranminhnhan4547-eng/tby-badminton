@@ -111,6 +111,13 @@ async function syncAuth(){
   if(currentAdminRole==='owner'){$('#ownerSection').hidden=false;$('#siteSettingsSection').hidden=false;$('#videoAdminSection').hidden=false;await Promise.all([loadOwnerAccess(),populateSettingsForm(),loadAdminVideos()]);}
   await loadAdminEvents();
 }
+// Điền lại email gần nhất để đăng nhập trên điện thoại nhanh hơn.
+const lastTbyEmail=localStorage.getItem('tby_last_email');
+if(lastTbyEmail){
+  if($('#adminEmail')) $('#adminEmail').value=lastTbyEmail;
+  if($('#signupEmail')) $('#signupEmail').value=lastTbyEmail;
+}
+
 document.querySelectorAll('[data-auth-mode]').forEach(btn=>btn.addEventListener('click',()=>{
   const mode=btn.dataset.authMode;
   document.querySelectorAll('[data-auth-mode]').forEach(x=>x.classList.toggle('active',x===btn));
@@ -129,7 +136,14 @@ $('#loginForm').addEventListener('submit',async ev=>{
   const {error}=await supabase.auth.signInWithPassword({email,password});
   m.className=`form-msg ${error?'err':'ok'}`;
   if(error){
-    m.textContent=(error.message||'').includes('Invalid login credentials')?'Email hoặc mật khẩu chưa đúng. Nếu mới tạo tài khoản, hãy xác nhận email 1 lần trước.':error.message;
+    const raw=error.message||'';
+    if(raw.includes('Email not confirmed')){
+      m.textContent='Email chưa được xác nhận. Mở email Supabase, xác nhận 1 lần rồi quay lại đây đăng nhập bằng mật khẩu.';
+    }else if(raw.includes('Invalid login credentials')){
+      m.textContent='Email hoặc mật khẩu chưa đúng. Nếu vừa tạo tài khoản, hãy xác nhận email trước rồi thử lại.';
+    }else{
+      m.textContent=raw;
+    }
     return;
   }
   m.textContent='Đăng nhập thành công.';
@@ -138,22 +152,63 @@ $('#loginForm').addEventListener('submit',async ev=>{
 
 $('#signupForm').addEventListener('submit',async ev=>{
   ev.preventDefault();
-  const email=$('#signupEmail').value.trim();
+  const email=$('#signupEmail').value.trim().toLowerCase();
   const password=$('#signupPassword').value;
   const password2=$('#signupPassword2').value;
   const m=$('#loginMsg');
+
+  if(!email){m.className='form-msg err';m.textContent='Nhập email.';return;}
   if(password.length<6){m.className='form-msg err';m.textContent='Mật khẩu cần ít nhất 6 ký tự.';return;}
   if(password!==password2){m.className='form-msg err';m.textContent='Hai mật khẩu không giống nhau.';return;}
+
   m.className='form-msg';m.textContent='Đang tạo tài khoản…';
-  const {data,error}=await supabase.auth.signUp({email,password,options:{emailRedirectTo:TBY_SITE_URL}});
-  if(error){m.className='form-msg err';m.textContent=error.message;return;}
-  m.className='form-msg ok';
-  if(data.session){
+
+  const {data,error}=await supabase.auth.signUp({
+    email,
+    password,
+    options:{emailRedirectTo:TBY_SITE_URL}
+  });
+
+  if(error){
+    m.className='form-msg err';
+    const msg=error.message||'';
+    if(msg.toLowerCase().includes('already registered') || msg.toLowerCase().includes('already been registered')){
+      m.textContent='Email này đã có tài khoản. Chuyển sang Đăng nhập và dùng mật khẩu.';
+      localStorage.setItem('tby_last_email',email);
+      $('#adminEmail').value=email;
+      return;
+    }
+    m.textContent=msg;
+    return;
+  }
+
+  localStorage.setItem('tby_last_email',email);
+
+  // Nếu project không bắt xác nhận email thì Supabase trả session ngay.
+  if(data?.session?.user){
+    m.className='form-msg ok';
     m.textContent='Tạo tài khoản thành công. Tài khoản đang chờ Owner duyệt.';
     await syncAuth();
-  }else{
-    m.textContent='Đã tạo tài khoản. Nếu Supabase gửi email xác nhận, chỉ cần xác nhận 1 lần; sau đó đăng nhập bằng email + mật khẩu.';
+    return;
   }
+
+  // Nếu bắt xác nhận email: account đã được tạo trong auth.users.
+  // Owner có thể thấy tài khoản để duyệt; người dùng chỉ cần xác nhận email
+  // rồi quay lại đăng nhập bằng mật khẩu. Không phụ thuộc session của Gmail webview.
+  m.className='form-msg ok';
+  m.textContent='Tài khoản đã được tạo. Hãy xác nhận email 1 lần, sau đó quay lại TBY và đăng nhập bằng email + mật khẩu.';
+  $('#adminEmail').value=email;
+});
+
+$('#signupToLoginBtn')?.addEventListener('click',()=>{
+  const email=($('#signupEmail').value||localStorage.getItem('tby_last_email')||'').trim();
+  document.querySelectorAll('[data-auth-mode]').forEach(x=>x.classList.toggle('active',x.dataset.authMode==='login'));
+  $('#signupForm').hidden=true;
+  $('#loginForm').hidden=false;
+  if(email) $('#adminEmail').value=email;
+  $('#adminPassword').focus();
+  $('#loginMsg').className='form-msg';
+  $('#loginMsg').textContent='Nhập mật khẩu đã tạo rồi bấm Đăng nhập.';
 });
 
 $('#magicLinkBtn').addEventListener('click',async()=>{
@@ -210,6 +265,7 @@ async function recoverMobileAuthSession(){
     // Nếu session đã được Supabase tự phục hồi từ localStorage, nhận luôn.
     const {data:{session}}=await supabase.auth.getSession();
     if(session?.user){
+      if(session.user.email)localStorage.setItem('tby_last_email',session.user.email);
       await syncAuth();
     }
   }catch(err){
