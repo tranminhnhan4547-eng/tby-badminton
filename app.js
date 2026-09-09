@@ -144,7 +144,7 @@ $('#loginForm').addEventListener('submit',async ev=>{
   if(error){
     const raw=error.message||'';
     if(raw.includes('Email not confirmed')){
-      m.textContent='Email chưa được xác nhận. Mở email Supabase, xác nhận 1 lần rồi quay lại đây đăng nhập bằng mật khẩu.';
+      m.textContent='Supabase đang bật Confirm Email nên tài khoản này chưa đăng nhập được. Hãy tắt Confirm Email trong Authentication.';
     }else if(raw.includes('Invalid login credentials')){
       m.textContent='Email hoặc mật khẩu chưa đúng. Nếu vừa tạo tài khoản, hãy xác nhận email trước rồi thử lại.';
     }else{
@@ -169,52 +169,30 @@ $('#signupForm').addEventListener('submit',async ev=>{
 
   m.className='form-msg';m.textContent='Đang tạo tài khoản…';
 
-  const {data,error}=await supabase.auth.signUp({
-    email,
-    password,
-    options:{emailRedirectTo:TBY_SITE_URL}
-  });
+  const {data,error}=await supabase.auth.signUp({email,password});
 
   if(error){
     m.className='form-msg err';
     const msg=error.message||'';
     if(msg.toLowerCase().includes('already registered') || msg.toLowerCase().includes('already been registered')){
-      m.textContent='Email này đã có tài khoản. Chuyển sang Đăng nhập và dùng mật khẩu.';
-      localStorage.setItem('tby_last_email',email);
-      $('#adminEmail').value=email;
-      return;
+      m.textContent='Email này đã có tài khoản. Hãy chuyển sang Đăng nhập.';
+    }else{
+      m.textContent=msg;
     }
-    m.textContent=msg;
     return;
   }
 
   localStorage.setItem('tby_last_email',email);
 
-  // Nếu project không bắt xác nhận email thì Supabase trả session ngay.
-  if(data?.session?.user){
-    m.className='form-msg ok';
-    m.textContent='Tạo tài khoản thành công. Tài khoản đang chờ Owner duyệt.';
-    await syncAuth();
+  if(!data?.session){
+    m.className='form-msg err';
+    m.textContent='Supabase vẫn đang bật Confirm Email. Hãy tắt Confirm Email trong Authentication để dùng luồng đăng ký nhanh.';
     return;
   }
 
-  // Nếu bắt xác nhận email: account đã được tạo trong auth.users.
-  // Owner có thể thấy tài khoản để duyệt; người dùng chỉ cần xác nhận email
-  // rồi quay lại đăng nhập bằng mật khẩu. Không phụ thuộc session của Gmail webview.
   m.className='form-msg ok';
-  m.textContent='Tài khoản đã được tạo. Hãy xác nhận email 1 lần, sau đó quay lại TBY và đăng nhập bằng email + mật khẩu.';
-  $('#adminEmail').value=email;
-});
-
-$('#signupToLoginBtn')?.addEventListener('click',()=>{
-  const email=($('#signupEmail').value||localStorage.getItem('tby_last_email')||'').trim();
-  document.querySelectorAll('[data-auth-mode]').forEach(x=>x.classList.toggle('active',x.dataset.authMode==='login'));
-  $('#signupForm').hidden=true;
-  $('#loginForm').hidden=false;
-  if(email) $('#adminEmail').value=email;
-  $('#adminPassword').focus();
-  $('#loginMsg').className='form-msg';
-  $('#loginMsg').textContent='Nhập mật khẩu đã tạo rồi bấm Đăng nhập.';
+  m.textContent='Tạo tài khoản thành công. Tài khoản đang chờ Owner duyệt.';
+  await syncAuth();
 });
 
 $('#magicLinkBtn').addEventListener('click',async()=>{
