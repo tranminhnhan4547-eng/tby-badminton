@@ -55,21 +55,30 @@ async function loadEvents(){
   root.querySelectorAll('[data-register]').forEach(btn=>btn.addEventListener('click',()=>openRegister(btn.dataset.register)));
 }
 function eventCard(e){
-  const malePct=Math.min(100,Math.round((e.male_count/Math.max(1,e.male_slots))*100));
-  const femalePct=Math.min(100,Math.round((e.female_count/Math.max(1,e.female_slots))*100));
+  const maleCount=Number(e.male_count||0);
+  const femaleCount=Number(e.female_count||0);
+  const totalCount=Number(e.total_count ?? (maleCount+femaleCount));
+  const totalSlots=Math.max(1,Number(e.total_slots||10));
+  const totalPct=Math.min(100,Math.round((totalCount/totalSlots)*100));
   const cancelled=!!e.is_cancelled;
-  const open=!cancelled && e.is_open && (e.male_count<e.male_slots || e.female_count<e.female_slots);
+  const full=totalCount>=totalSlots;
+  const open=!cancelled && !!e.is_open && !full;
   const players=[...(e.players||[])];
-  const statusText=cancelled?'ĐÃ HỦY KÈO':(open?'ĐANG MỞ ĐĂNG KÝ':'ĐÃ ĐÓNG / ĐỦ SLOT');
+  const statusText=cancelled?'ĐÃ HỦY KÈO':(!e.is_open?'ĐÃ ĐÓNG ĐĂNG KÝ':(full?'ĐÃ ĐỦ SLOT':'ĐANG MỞ ĐĂNG KÝ'));
   const statusClass=cancelled?'cancelled':(open?'open':'closed');
+  const buttonText=cancelled?'Kèo đã hủy':(!e.is_open?'Đã đóng đăng ký':(full?'Đã đủ slot':'Đăng ký slot →'));
   return `<article class="event-card ${cancelled?'event-cancelled':''}">
     ${e.image_url?`<img class="event-image" src="${esc(e.image_url)}" alt="Ảnh ${esc(e.title)}">`:''}
     <div class="date-box"><div><div class="day">${esc(fmtDate(e.event_date).split(',')[0])}</div><div class="date">${esc(e.event_date.slice(8,10))}/${esc(e.event_date.slice(5,7))}</div><div>${esc(e.event_date.slice(0,4))}</div></div></div>
     <div class="event-main"><span class="status ${statusClass}">${statusText}</span><h3>${esc(e.title)}</h3>
       <div class="meta"><span>📍 ${esc(e.venue)}</span><span>🕒 ${esc(e.start_time.slice(0,5))} – ${esc(e.end_time.slice(0,5))}</span><span>💰 Nam ${e.male_fee||0}k · Nữ ${e.female_fee||0}k</span><span>🏸 Trình: ${esc(e.level_range)}</span></div>
-      <div class="slots"><div class="slot-box"><div class="slot-title"><span>NAM</span><span>${e.male_count}/${e.male_slots}</span></div><div class="slot-count">${e.male_slots-e.male_count>0?`Còn ${e.male_slots-e.male_count}`:'Đủ'}</div><div class="bar"><span style="width:${malePct}%"></span></div></div><div class="slot-box female"><div class="slot-title"><span>NỮ</span><span>${e.female_count}/${e.female_slots}</span></div><div class="slot-count">${e.female_slots-e.female_count>0?`Còn ${e.female_slots-e.female_count}`:'Đủ'}</div><div class="bar"><span style="width:${femalePct}%"></span></div></div></div>
+      <div class="slots">
+        <div class="slot-box total"><div class="slot-title"><span>TỔNG SLOT</span><span>${totalCount}/${totalSlots}</span></div><div class="slot-count">${full?'Đã đủ':`Còn ${Math.max(0,totalSlots-totalCount)} slot`}</div><div class="bar"><span style="width:${totalPct}%"></span></div></div>
+        <div class="slot-box"><div class="slot-title"><span>NAM</span><span>${maleCount} người</span></div><div class="slot-count small">${maleCount}</div></div>
+        <div class="slot-box female"><div class="slot-title"><span>NỮ</span><span>${femaleCount} người</span></div><div class="slot-count small">${femaleCount}</div></div>
+      </div>
     </div>
-    <div class="event-side"><div class="player-list"><h4>Danh sách đã đăng ký</h4>${players.length?players.map(p=>`<div class="player"><span>${esc(p.full_name)}</span><span>${p.gender==='male'?'Nam':'Nữ'} · ${esc(p.level)}</span></div>`).join(''):'<span class="muted">Chưa có người đăng ký.</span>'}</div><button class="btn btn-primary" data-register="${e.id}" ${open?'':'disabled'}>${cancelled?'Kèo đã hủy':(open?'Đăng ký slot →':'Hết slot')}</button></div>
+    <div class="event-side"><div class="player-list"><h4>Danh sách đã đăng ký</h4>${players.length?players.map(p=>`<div class="player"><span>${esc(p.full_name)}</span><span>${p.gender==='male'?'Nam':'Nữ'} · ${esc(p.level)}</span></div>`).join(''):'<span class="muted">Chưa có người đăng ký.</span>'}</div><button class="btn btn-primary" data-register="${e.id}" ${open?'':'disabled'}>${buttonText}</button></div>
   </article>`;
 }
 async function openRegister(id){
@@ -92,36 +101,69 @@ $('#refreshBtn').addEventListener('click',loadEvents);$('#adminRefreshBtn').addE
 
 async function syncAuth(){
   const {data:{user}}=await supabase.auth.getUser();currentAdminUser=null;currentAdminRole=null;
-  $('#authPane').hidden=!!user;$('#adminPane').hidden=true;$('#notAdminPane').hidden=true;$('#ownerSection').hidden=true;$('#siteSettingsSection').hidden=true;
+  $('#authPane').hidden=!!user;$('#adminPane').hidden=true;$('#notAdminPane').hidden=true;$('#ownerSection').hidden=true;$('#siteSettingsSection').hidden=true;$('#videoAdminSection').hidden=true;
   if(!user)return;
   const {data:adminRow}=await supabase.from('admin_users').select('user_id,role').eq('user_id',user.id).maybeSingle();
-  if(!adminRow){$('#notAdminPane').hidden=false;$('#notAdminIdentity').textContent=user.email||'Tài khoản này';await loadMyRequest();return;}
+  if(!adminRow){$('#notAdminPane').hidden=false;$('#notAdminIdentity').textContent=user.email||'Tài khoản này';return;}
   currentAdminUser=user;currentAdminRole=adminRow.role||'admin';$('#adminPane').hidden=false;$('#adminIdentity').textContent=`${user.email||'Quản lý'} · ${currentAdminRole.toUpperCase()}`;
   $('#eventEditorSection').hidden=currentAdminRole==='moderator';
-  if(currentAdminRole==='owner'){$('#ownerSection').hidden=false;$('#siteSettingsSection').hidden=false;await Promise.all([loadOwnerAccess(),populateSettingsForm()]);}
+  $('#eOpen').disabled=currentAdminRole!=='owner';$('#eOpenHint').textContent=currentAdminRole==='owner'?'(Bạn có quyền đóng/mở đăng ký)':'(Chỉ Owner được đóng/mở đăng ký)';
+  if(currentAdminRole==='owner'){$('#ownerSection').hidden=false;$('#siteSettingsSection').hidden=false;$('#videoAdminSection').hidden=false;await Promise.all([loadOwnerAccess(),populateSettingsForm(),loadAdminVideos()]);}
   await loadAdminEvents();
 }
+document.querySelectorAll('[data-auth-mode]').forEach(btn=>btn.addEventListener('click',()=>{
+  const mode=btn.dataset.authMode;
+  document.querySelectorAll('[data-auth-mode]').forEach(x=>x.classList.toggle('active',x===btn));
+  $('#loginForm').hidden=mode!=='login';
+  $('#signupForm').hidden=mode!=='signup';
+  $('#loginMsg').textContent='';
+}));
+
 $('#loginForm').addEventListener('submit',async ev=>{
   ev.preventDefault();
   const email=$('#adminEmail').value.trim();
+  const password=$('#adminPassword').value;
   const m=$('#loginMsg');
-  if(!email){m.className='form-msg err';m.textContent='Nhập email trước.';return;}
-  m.className='form-msg';m.textContent='Đang gửi link đăng nhập…';
-  const {error}=await supabase.auth.signInWithOtp({
-    email,
-    options:{
-      emailRedirectTo:TBY_SITE_URL,
-      shouldCreateUser:true
-    }
-  });
+  if(!email||!password){m.className='form-msg err';m.textContent='Nhập email và mật khẩu.';return;}
+  m.className='form-msg';m.textContent='Đang đăng nhập…';
+  const {error}=await supabase.auth.signInWithPassword({email,password});
   m.className=`form-msg ${error?'err':'ok'}`;
   if(error){
-    m.textContent=(error.message||'').toLowerCase().includes('rate limit')
-      ? 'Supabase đang giới hạn gửi email. Chờ một lúc rồi thử lại 1 lần.'
-      : error.message;
-  }else{
-    m.textContent='Đã gửi link đăng nhập. Mở email mới nhất và bấm link.';
+    m.textContent=(error.message||'').includes('Invalid login credentials')?'Email hoặc mật khẩu chưa đúng. Nếu mới tạo tài khoản, hãy xác nhận email 1 lần trước.':error.message;
+    return;
   }
+  m.textContent='Đăng nhập thành công.';
+  await syncAuth();
+});
+
+$('#signupForm').addEventListener('submit',async ev=>{
+  ev.preventDefault();
+  const email=$('#signupEmail').value.trim();
+  const password=$('#signupPassword').value;
+  const password2=$('#signupPassword2').value;
+  const m=$('#loginMsg');
+  if(password.length<6){m.className='form-msg err';m.textContent='Mật khẩu cần ít nhất 6 ký tự.';return;}
+  if(password!==password2){m.className='form-msg err';m.textContent='Hai mật khẩu không giống nhau.';return;}
+  m.className='form-msg';m.textContent='Đang tạo tài khoản…';
+  const {data,error}=await supabase.auth.signUp({email,password,options:{emailRedirectTo:TBY_SITE_URL}});
+  if(error){m.className='form-msg err';m.textContent=error.message;return;}
+  m.className='form-msg ok';
+  if(data.session){
+    m.textContent='Tạo tài khoản thành công. Tài khoản đang chờ Owner duyệt.';
+    await syncAuth();
+  }else{
+    m.textContent='Đã tạo tài khoản. Nếu Supabase gửi email xác nhận, chỉ cần xác nhận 1 lần; sau đó đăng nhập bằng email + mật khẩu.';
+  }
+});
+
+$('#magicLinkBtn').addEventListener('click',async()=>{
+  const email=($('#adminEmail').value||$('#signupEmail').value||'').trim();
+  const m=$('#loginMsg');
+  if(!email){m.className='form-msg err';m.textContent='Nhập email trước rồi bấm Magic Link.';return;}
+  m.className='form-msg';m.textContent='Đang gửi Magic Link…';
+  const {error}=await supabase.auth.signInWithOtp({email,options:{emailRedirectTo:TBY_SITE_URL,shouldCreateUser:true}});
+  m.className=`form-msg ${error?'err':'ok'}`;
+  m.textContent=error?((error.message||'').toLowerCase().includes('rate limit')?'Supabase đang giới hạn gửi email. Chờ một lúc rồi thử lại.':error.message):'Đã gửi Magic Link. Hãy mở email mới nhất.';
 });
 $('#logoutBtn').addEventListener('click',async()=>{await supabase.auth.signOut();await syncAuth();});
 $('#notAdminLogoutBtn').addEventListener('click',async()=>{await supabase.auth.signOut();await syncAuth();});
@@ -176,7 +218,7 @@ async function recoverMobileAuthSession(){
 }
 
 function resetEventForm(){
-  $('#eventForm').reset();$('#editingEventId').value='';$('#eLevel').value='Yếu+ → TB-';$('#eMale').value=5;$('#eFemale').value=5;$('#eMaleFee').value=65;$('#eFemaleFee').value=55;$('#eOpen').checked=true;$('#eventFormHeading').textContent='Tạo kèo mới';$('#saveEventBtn').textContent='Tạo kèo';$('#cancelEditBtn').hidden=true;$('#eventImagePreview').hidden=true;$('#removeEventImageBtn').hidden=true;$('#eImageFile').value='';pendingRemoveEventImage=false;
+  $('#eventForm').reset();$('#editingEventId').value='';$('#eLevel').value='Yếu+ → TB-';$('#eTotal').value=10;$('#eMaleFee').value=65;$('#eFemaleFee').value=55;$('#eOpen').checked=true;$('#eventFormHeading').textContent='Tạo kèo mới';$('#saveEventBtn').textContent='Tạo kèo';$('#cancelEditBtn').hidden=true;$('#eventImagePreview').hidden=true;$('#removeEventImageBtn').hidden=true;$('#eImageFile').value='';pendingRemoveEventImage=false;$('#eOpen').disabled=currentAdminRole!=='owner';
 }
 $('#cancelEditBtn').addEventListener('click',resetEventForm);
 $('#eImageFile').addEventListener('change',()=>{const f=$('#eImageFile').files[0];if(!f)return;$('#eventImagePreview').src=URL.createObjectURL(f);$('#eventImagePreview').hidden=false;$('#removeEventImageBtn').hidden=false;pendingRemoveEventImage=false;});
@@ -193,11 +235,11 @@ async function removeMediaUrl(url){const p=storagePathFromUrl(url);if(p)await su
 $('#eventForm').addEventListener('submit',async ev=>{
   ev.preventDefault();if(!currentAdminUser||!['owner','admin'].includes(currentAdminRole))return alert('Chỉ Owner/Admin mới được chỉnh kèo.');
   const id=$('#editingEventId').value||null;const old=id?currentAdminEvents.find(x=>x.id===id):null;
-  const p={title:$('#eTitle').value.trim(),venue:$('#eVenue').value.trim(),event_date:$('#eDate').value,start_time:$('#eStart').value,end_time:$('#eEnd').value,level_range:$('#eLevel').value.trim(),male_slots:+$('#eMale').value,female_slots:+$('#eFemale').value,male_fee:+$('#eMaleFee').value||0,female_fee:+$('#eFemaleFee').value||0,is_open:$('#eOpen').checked};
+  const totalSlots=Math.max(1,+$('#eTotal').value||1);const p={title:$('#eTitle').value.trim(),venue:$('#eVenue').value.trim(),event_date:$('#eDate').value,start_time:$('#eStart').value,end_time:$('#eEnd').value,level_range:$('#eLevel').value.trim(),total_slots:totalSlots,male_slots:totalSlots,female_slots:totalSlots,male_fee:+$('#eMaleFee').value||0,female_fee:+$('#eFemaleFee').value||0};if(currentAdminRole==='owner')p.is_open=$('#eOpen').checked;
   const m=$('#adminMsg');m.textContent='Đang lưu…';m.className='form-msg';
   try{
     let eventId=id;
-    if(id){const {error}=await supabase.from('events').update(p).eq('id',id);if(error)throw error;}else{const {data,error}=await supabase.from('events').insert({...p,is_cancelled:false}).select('id').single();if(error)throw error;eventId=data.id;}
+    if(id){const {error}=await supabase.from('events').update(p).eq('id',id);if(error)throw error;}else{const createPayload={...p,is_cancelled:false,is_open:currentAdminRole==='owner'?$('#eOpen').checked:true};const {data,error}=await supabase.from('events').insert(createPayload).select('id').single();if(error)throw error;eventId=data.id;}
     if(pendingRemoveEventImage&&old?.image_url){await removeMediaUrl(old.image_url);const {error}=await supabase.from('events').update({image_url:null}).eq('id',eventId);if(error)throw error;}
     const file=$('#eImageFile').files[0];if(file){if(old?.image_url)await removeMediaUrl(old.image_url);const url=await uploadMedia(file,`events/${eventId}-${Date.now()}`);const {error}=await supabase.from('events').update({image_url:url}).eq('id',eventId);if(error)throw error;}
     m.className='form-msg ok';m.textContent=id?'Đã cập nhật kèo.':'Tạo kèo thành công.';resetEventForm();await Promise.all([loadEvents(),loadAdminEvents()]);
@@ -210,18 +252,39 @@ async function loadAdminEvents(){
   currentAdminEvents=data||[];if(!currentAdminEvents.length){root.innerHTML='<div class="admin-empty">Chưa có kèo nào.</div>';return;}root.innerHTML=currentAdminEvents.map(adminEventCard).join('');
   root.querySelectorAll('[data-admin-edit]').forEach(b=>b.addEventListener('click',()=>editEvent(b.dataset.adminEdit)));
   root.querySelectorAll('[data-admin-cancel]').forEach(b=>b.addEventListener('click',()=>toggleCancelEvent(b.dataset.adminCancel,b.dataset.cancelled==='true')));
+  root.querySelectorAll('[data-admin-registration]').forEach(b=>b.addEventListener('click',()=>toggleRegistration(b.dataset.adminRegistration,b.dataset.open==='true')));
   root.querySelectorAll('[data-admin-delete]').forEach(b=>b.addEventListener('click',()=>deleteEvent(b.dataset.adminDelete)));
   root.querySelectorAll('[data-admin-players]').forEach(b=>b.addEventListener('click',()=>loadAdminPlayers(b.dataset.adminPlayers)));
 }
-function adminEventCard(e){const cancelled=!!e.is_cancelled;return `<article class="admin-event-item"><div class="admin-event-info"><strong>${esc(e.title)}</strong><span>${esc(e.event_date)} · ${esc(e.start_time.slice(0,5))}–${esc(e.end_time.slice(0,5))} · ${esc(e.venue)}</span><span>Nam ${e.male_count}/${e.male_slots} · Nữ ${e.female_count}/${e.female_slots}${cancelled?' · ĐÃ HỦY':''}</span></div><div class="admin-actions"><button type="button" class="btn btn-ghost btn-sm" data-admin-players="${e.id}">Người đăng ký</button>${currentAdminRole!=='moderator'?`<button type="button" class="btn btn-outline btn-sm" data-admin-edit="${e.id}">Sửa kèo</button><button type="button" class="btn ${cancelled?'btn-success':'btn-warning'} btn-sm" data-admin-cancel="${e.id}" data-cancelled="${cancelled}">${cancelled?'Mở lại kèo':'Hủy kèo'}</button><button type="button" class="btn btn-danger btn-sm" data-admin-delete="${e.id}">Xóa kèo</button>`:''}</div><div class="admin-players" id="players-${e.id}" hidden></div></article>`;}
-function editEvent(id){if(!['owner','admin'].includes(currentAdminRole))return;const e=currentAdminEvents.find(x=>x.id===id);if(!e)return;$('#editingEventId').value=e.id;$('#eTitle').value=e.title;$('#eVenue').value=e.venue;$('#eDate').value=e.event_date;$('#eStart').value=e.start_time.slice(0,5);$('#eEnd').value=e.end_time.slice(0,5);$('#eLevel').value=e.level_range;$('#eMale').value=e.male_slots;$('#eFemale').value=e.female_slots;$('#eMaleFee').value=e.male_fee||0;$('#eFemaleFee').value=e.female_fee||0;$('#eOpen').checked=!!e.is_open;$('#eImageFile').value='';pendingRemoveEventImage=false;$('#eventFormHeading').textContent='Sửa kèo';$('#saveEventBtn').textContent='Lưu thay đổi';$('#cancelEditBtn').hidden=false;if(e.image_url){$('#eventImagePreview').src=e.image_url;$('#eventImagePreview').hidden=false;$('#removeEventImageBtn').hidden=false;}else{$('#eventImagePreview').hidden=true;$('#removeEventImageBtn').hidden=true;}$('#eventEditorSection').scrollIntoView({behavior:'smooth',block:'start'});}
+function adminEventCard(e){
+  const cancelled=!!e.is_cancelled;
+  const maleCount=Number(e.male_count||0),femaleCount=Number(e.female_count||0);
+  const totalCount=Number(e.total_count ?? (maleCount+femaleCount));
+  const totalSlots=Math.max(1,Number(e.total_slots||10));
+  const regState=!e.is_open?'ĐÃ ĐÓNG ĐĂNG KÝ':(totalCount>=totalSlots?'ĐÃ ĐỦ SLOT':'ĐANG MỞ');
+  const ownerRegistrationButton=currentAdminRole==='owner'&&!cancelled?`<button type="button" class="btn ${e.is_open?'btn-warning':'btn-success'} btn-sm" data-admin-registration="${e.id}" data-open="${!!e.is_open}">${e.is_open?'Đóng đăng ký':'Mở đăng ký'}</button>`:'';
+  return `<article class="admin-event-item"><div class="admin-event-info"><strong>${esc(e.title)}</strong><span>${esc(e.event_date)} · ${esc(e.start_time.slice(0,5))}–${esc(e.end_time.slice(0,5))} · ${esc(e.venue)}</span><span>Tổng ${totalCount}/${totalSlots} · Nam ${maleCount} · Nữ ${femaleCount} · ${regState}${cancelled?' · ĐÃ HỦY':''}</span></div><div class="admin-actions"><button type="button" class="btn btn-ghost btn-sm" data-admin-players="${e.id}">Người đăng ký</button>${ownerRegistrationButton}${currentAdminRole!=='moderator'?`<button type="button" class="btn btn-outline btn-sm" data-admin-edit="${e.id}">Sửa kèo</button><button type="button" class="btn ${cancelled?'btn-success':'btn-warning'} btn-sm" data-admin-cancel="${e.id}" data-cancelled="${cancelled}">${cancelled?'Mở lại kèo':'Hủy kèo'}</button><button type="button" class="btn btn-danger btn-sm" data-admin-delete="${e.id}">Xóa kèo</button>`:''}</div><div class="admin-players" id="players-${e.id}" hidden></div></article>`;
+}
+function editEvent(id){
+  if(!['owner','admin'].includes(currentAdminRole))return;
+  const e=currentAdminEvents.find(x=>x.id===id);if(!e)return;
+  $('#editingEventId').value=e.id;$('#eTitle').value=e.title;$('#eVenue').value=e.venue;$('#eDate').value=e.event_date;$('#eStart').value=e.start_time.slice(0,5);$('#eEnd').value=e.end_time.slice(0,5);$('#eLevel').value=e.level_range;$('#eTotal').value=e.total_slots||10;$('#eMaleFee').value=e.male_fee||0;$('#eFemaleFee').value=e.female_fee||0;$('#eOpen').checked=!!e.is_open;$('#eOpen').disabled=currentAdminRole!=='owner';$('#eImageFile').value='';pendingRemoveEventImage=false;$('#eventFormHeading').textContent='Sửa kèo';$('#saveEventBtn').textContent='Lưu thay đổi';$('#cancelEditBtn').hidden=false;
+  if(e.image_url){$('#eventImagePreview').src=e.image_url;$('#eventImagePreview').hidden=false;$('#removeEventImageBtn').hidden=false;}else{$('#eventImagePreview').hidden=true;$('#removeEventImageBtn').hidden=true;}
+  $('#eventEditorSection').scrollIntoView({behavior:'smooth',block:'start'});
+}
+async function toggleRegistration(id,isOpen){
+  if(currentAdminRole!=='owner')return alert('Chỉ Owner mới được đóng/mở đăng ký.');
+  const e=currentAdminEvents.find(x=>x.id===id);if(e?.is_cancelled)return alert('Kèo đang bị hủy. Hãy mở lại kèo trước.');
+  if(!confirm(`${isOpen?'Đóng':'Mở lại'} đăng ký cho kèo này?`))return;
+  const {error}=await supabase.rpc('owner_set_registration_open',{p_event_id:id,p_is_open:!isOpen});
+  if(error)return alert(error.message);
+  await Promise.all([loadEvents(),loadAdminEvents()]);
+}
 async function toggleCancelEvent(id,isCancelled){if(!['owner','admin'].includes(currentAdminRole))return alert('Chỉ Owner/Admin mới được thay đổi kèo.');if(!confirm(`Bạn có chắc muốn ${isCancelled?'mở lại':'hủy'} kèo này?`))return;const patch=isCancelled?{is_cancelled:false,is_open:true}:{is_cancelled:true,is_open:false};const {error}=await supabase.from('events').update(patch).eq('id',id);if(error)return alert(error.message);await Promise.all([loadEvents(),loadAdminEvents()]);}
 async function deleteEvent(id){if(!['owner','admin'].includes(currentAdminRole))return alert('Chỉ Owner/Admin mới được xóa kèo.');const e=currentAdminEvents.find(x=>x.id===id);if(!confirm(`XÓA VĨNH VIỄN kèo “${e?.title||''}”?\nToàn bộ người đăng ký cũng sẽ bị xóa.`))return;if(e?.image_url)await removeMediaUrl(e.image_url);const {error}=await supabase.from('events').delete().eq('id',id);if(error)return alert(error.message);await Promise.all([loadEvents(),loadAdminEvents()]);}
 async function loadAdminPlayers(eventId){const box=$(`#players-${eventId}`);if(!box)return;if(!box.hidden){box.hidden=true;return;}box.hidden=false;box.innerHTML='<div class="admin-empty">Đang tải danh sách…</div>';const {data,error}=await supabase.rpc('admin_get_registrations',{p_event_id:eventId});if(error){box.innerHTML=`<div class="admin-empty">${esc(error.message)}</div>`;return;}if(!data?.length){box.innerHTML='<div class="admin-empty">Chưa có người đăng ký.</div>';return;}box.innerHTML=data.map(r=>`<div class="admin-player-row"><div><strong>${esc(r.full_name)}</strong><span>${r.gender==='male'?'Nam':'Nữ'} · ${esc(r.level)} · ${esc(r.phone||'')}</span>${r.note?`<small>Ghi chú: ${esc(r.note)}</small>`:''}<small>Đăng ký: ${new Date(r.created_at).toLocaleString('vi-VN')}</small></div><button type="button" class="btn btn-danger btn-sm" data-delete-registration="${r.id}" data-event-id="${eventId}" data-name="${esc(r.full_name)}">Xóa slot</button></div>`).join('');box.querySelectorAll('[data-delete-registration]').forEach(b=>b.addEventListener('click',()=>deleteRegistration(b.dataset.deleteRegistration,b.dataset.eventId,b.dataset.name)));}
 async function deleteRegistration(id,eventId,name){if(!confirm(`Xóa slot đăng ký của “${name}”?`))return;const {error}=await supabase.from('registrations').delete().eq('id',id);if(error)return alert(error.message);await Promise.all([loadEvents(),loadAdminEvents()]);const btn=document.querySelector(`[data-admin-players="${eventId}"]`);if(btn)await loadAdminPlayers(eventId);}
 
-async function loadMyRequest(){const {data:{user}}=await supabase.auth.getUser();if(!user)return;const {data}=await supabase.from('admin_requests').select('status').eq('user_id',user.id).maybeSingle();const m=$('#requestMsg');if(data?.status==='pending'){m.className='form-msg ok';m.textContent='Yêu cầu đang chờ Owner duyệt.';$('#requestAdminBtn').disabled=true;}else if(data?.status==='rejected'){m.className='form-msg err';m.textContent='Yêu cầu trước đã bị từ chối. Bạn có thể gửi lại.';$('#requestAdminBtn').disabled=false;}else{m.textContent='';$('#requestAdminBtn').disabled=false;}}
-$('#requestAdminBtn').addEventListener('click',async()=>{const full_name=$('#requestName').value.trim();if(!full_name)return alert('Nhập họ tên trước.');const {error}=await supabase.rpc('submit_admin_request',{p_full_name:full_name,p_note:$('#requestNote').value.trim()});const m=$('#requestMsg');m.className=`form-msg ${error?'err':'ok'}`;m.textContent=error?error.message:'Đã gửi yêu cầu. Chờ Owner duyệt.';if(!error)await loadMyRequest();});
 $('#ownerRefreshBtn').addEventListener('click',loadOwnerAccess);async function loadOwnerAccess(){if(currentAdminRole!=='owner')return;await Promise.all([loadPendingAdmins(),loadManagers()]);}
 async function loadPendingAdmins(){const root=$('#pendingAdminList');root.innerHTML='<div class="admin-empty">Đang tải yêu cầu…</div>';const {data,error}=await supabase.rpc('owner_list_admin_requests');if(error){root.innerHTML=`<div class="admin-empty">${esc(error.message)}</div>`;return;}if(!data?.length){root.innerHTML='<div class="admin-empty">Không có tài khoản chờ duyệt.</div>';return;}root.innerHTML=data.map(r=>`<article class="admin-event-item manager-row"><div class="who"><strong>${esc(r.full_name||r.email||'Tài khoản')}</strong><span>${esc(r.email||'')} · ${new Date(r.created_at).toLocaleString('vi-VN')}</span>${r.note?`<span>${esc(r.note)}</span>`:''}</div><div class="manager-actions"><select class="role-select" id="approve-role-${r.user_id}"><option value="admin">Admin</option><option value="moderator">Moderator</option></select><button class="btn btn-success btn-sm" data-approve-user="${r.user_id}">✓ Duyệt</button><button class="btn btn-danger btn-sm" data-reject-user="${r.user_id}">Từ chối</button></div></article>`).join('');root.querySelectorAll('[data-approve-user]').forEach(b=>b.addEventListener('click',()=>approveManager(b.dataset.approveUser)));root.querySelectorAll('[data-reject-user]').forEach(b=>b.addEventListener('click',()=>rejectManager(b.dataset.rejectUser)));}
 async function approveManager(userId){const role=$(`#approve-role-${userId}`).value;if(!confirm(`Duyệt với quyền ${role.toUpperCase()}?`))return;const {error}=await supabase.rpc('owner_approve_admin_request',{p_user_id:userId,p_role:role});if(error)return alert(error.message);await loadOwnerAccess();}
@@ -230,8 +293,72 @@ async function loadManagers(){const root=$('#managerList');root.innerHTML='<div 
 async function changeManagerRole(userId){const role=document.querySelector(`[data-role-user="${userId}"]`).value;const {error}=await supabase.rpc('owner_change_manager_role',{p_user_id:userId,p_role:role});if(error)return alert(error.message);await loadManagers();}
 async function revokeManager(userId){if(!confirm('Thu hồi toàn bộ quyền quản lý?'))return;const {error}=await supabase.rpc('owner_revoke_manager',{p_user_id:userId});if(error)return alert(error.message);await loadOwnerAccess();}
 
+
+let videoObserver=null;
+function setupVideoAutoplay(){
+  if(videoObserver)videoObserver.disconnect();
+  const vids=[...document.querySelectorAll('.tby-video')];
+  if(!('IntersectionObserver' in window))return;
+  videoObserver=new IntersectionObserver(entries=>{
+    entries.forEach(entry=>{
+      const v=entry.target;
+      if(entry.isIntersecting && entry.intersectionRatio>=0.62){
+        document.querySelectorAll('.tby-video').forEach(other=>{if(other!==v)other.pause();});
+        v.play().catch(()=>{});
+      }else v.pause();
+    });
+  },{threshold:[0,.62,1]});
+  vids.forEach(v=>videoObserver.observe(v));
+}
+async function loadTeamVideos(){
+  const root=$('#videoFeed');if(!root||!supabase)return;
+  root.innerHTML='<div class="empty-card">Đang tải video…</div>';
+  const {data,error}=await supabase.from('team_videos').select('*').eq('is_visible',true).order('sort_order').order('created_at',{ascending:false});
+  if(error){root.innerHTML=`<div class="empty-card">${esc(error.message)}</div>`;return;}
+  if(!data?.length){root.innerHTML='<div class="empty-card">Chưa có video TBY.</div>';return;}
+  root.innerHTML=data.map(v=>`<article class="video-card"><div class="video-frame"><video class="tby-video" src="${esc(v.video_url)}" muted loop playsinline preload="metadata"></video><button type="button" class="video-sound" data-video-sound>🔇 Bật tiếng</button></div><h3>${esc(v.title||'TBY')}</h3></article>`).join('');
+  root.querySelectorAll('[data-video-sound]').forEach(btn=>btn.addEventListener('click',()=>{const v=btn.parentElement.querySelector('video');v.muted=!v.muted;btn.textContent=v.muted?'🔇 Bật tiếng':'🔊 Tắt tiếng';if(v.paused)v.play().catch(()=>{});}));
+  setupVideoAutoplay();
+}
+async function loadAdminVideos(){
+  if(currentAdminRole!=='owner')return;
+  const root=$('#videoAdminList');root.innerHTML='<div class="admin-empty">Đang tải video…</div>';
+  const {data,error}=await supabase.from('team_videos').select('*').order('sort_order').order('created_at',{ascending:false});
+  if(error){root.innerHTML=`<div class="admin-empty">${esc(error.message)}</div>`;return;}
+  if(!data?.length){root.innerHTML='<div class="admin-empty">Chưa upload video.</div>';return;}
+  root.innerHTML=data.map(v=>`<article class="admin-event-item video-admin-row"><div class="video-admin-preview"><video src="${esc(v.video_url)}" muted playsinline preload="metadata"></video></div><div class="who"><strong>${esc(v.title||'Video TBY')}</strong><span>${v.is_visible?'Đang hiển thị':'Đang ẩn'} · ${new Date(v.created_at).toLocaleString('vi-VN')}</span></div><div class="manager-actions"><button class="btn btn-ghost btn-sm" data-video-toggle="${v.id}" data-visible="${!!v.is_visible}">${v.is_visible?'Ẩn video':'Hiện video'}</button><button class="btn btn-danger btn-sm" data-video-delete="${v.id}" data-url="${esc(v.video_url)}">Xóa</button></div></article>`).join('');
+  root.querySelectorAll('[data-video-toggle]').forEach(b=>b.addEventListener('click',()=>toggleVideoVisibility(b.dataset.videoToggle,b.dataset.visible==='true')));
+  root.querySelectorAll('[data-video-delete]').forEach(b=>b.addEventListener('click',()=>deleteTeamVideo(b.dataset.videoDelete,b.dataset.url)));
+}
+$('#videoAdminRefreshBtn').addEventListener('click',loadAdminVideos);
+$('#videoUploadForm').addEventListener('submit',async ev=>{
+  ev.preventDefault();if(currentAdminRole!=='owner')return alert('Chỉ Owner được upload video.');
+  const file=$('#videoFile').files[0],m=$('#videoAdminMsg'),btn=$('#videoUploadBtn');
+  if(!file)return;
+  if(file.size>50*1024*1024){m.className='form-msg err';m.textContent='Video vượt quá 50 MB.';return;}
+  btn.disabled=true;btn.textContent='Đang upload…';m.className='form-msg';m.textContent='Đang tải video lên Supabase…';
+  try{
+    const url=await uploadMedia(file,`videos/${crypto.randomUUID?crypto.randomUUID():Date.now()}`);
+    const {error}=await supabase.from('team_videos').insert({title:$('#videoTitle').value.trim()||'Video TBY',video_url:url,is_visible:$('#videoVisible').checked});
+    if(error){await removeMediaUrl(url);throw error;}
+    ev.target.reset();$('#videoVisible').checked=true;m.className='form-msg ok';m.textContent='Upload video thành công.';
+    await Promise.all([loadTeamVideos(),loadAdminVideos()]);
+  }catch(err){m.className='form-msg err';m.textContent=err.message||String(err);}
+  btn.disabled=false;btn.textContent='Upload video';
+});
+async function toggleVideoVisibility(id,isVisible){
+  if(currentAdminRole!=='owner')return;
+  const {error}=await supabase.from('team_videos').update({is_visible:!isVisible,updated_at:new Date().toISOString()}).eq('id',id);
+  if(error)return alert(error.message);await Promise.all([loadTeamVideos(),loadAdminVideos()]);
+}
+async function deleteTeamVideo(id,url){
+  if(currentAdminRole!=='owner'||!confirm('Xóa video này khỏi TBY?'))return;
+  const {error}=await supabase.from('team_videos').delete().eq('id',id);if(error)return alert(error.message);
+  await removeMediaUrl(url);await Promise.all([loadTeamVideos(),loadAdminVideos()]);
+}
+
 async function populateSettingsForm(){await loadSiteSettings();const s=currentSettings||fallbackSettings;$('#sHeroTitle').value=s.hero_title||'';$('#sHeroSubtitle').value=s.hero_subtitle||'';$('#sRules').value=s.rules_text||'';$('#sTikTok').value=s.tiktok_url||'';$('#sYouTube').value=s.youtube_url||'';$('#sFacebook').value=s.facebook_url||'';$('#sZalo').value=s.zalo_url||'';}
 $('#siteSettingsForm').addEventListener('submit',async ev=>{ev.preventDefault();if(currentAdminRole!=='owner')return alert('Chỉ Owner được chỉnh giao diện website.');const m=$('#siteSettingsMsg');m.textContent='Đang lưu…';m.className='form-msg';try{let s={...(currentSettings||fallbackSettings),hero_title:$('#sHeroTitle').value.trim(),hero_subtitle:$('#sHeroSubtitle').value.trim(),rules_text:$('#sRules').value.trim(),tiktok_url:$('#sTikTok').value.trim(),youtube_url:$('#sYouTube').value.trim(),facebook_url:$('#sFacebook').value.trim(),zalo_url:$('#sZalo').value.trim()};const files=[['sLogoFile','logo_url','site/logo'],['sHeroFile','hero_image_url','site/hero'],['sBackgroundFile','background_image_url','site/background']];for(const [input,key,path] of files){const f=$(`#${input}`).files[0];if(f){if(s[key])await removeMediaUrl(s[key]);s[key]=await uploadMedia(f,`${path}-${Date.now()}`);}}const {error}=await supabase.from('site_settings').upsert({id:1,...s,updated_at:new Date().toISOString()});if(error)throw error;m.className='form-msg ok';m.textContent='Đã cập nhật website.';currentSettings=s;applySettings(s);ev.target.querySelectorAll('input[type=file]').forEach(x=>x.value='');}catch(err){m.className='form-msg err';m.textContent=err.message||String(err);}});
 
 await recoverMobileAuthSession();
-await Promise.all([loadSiteSettings(),loadEvents()]);
+await Promise.all([loadSiteSettings(),loadEvents(),loadTeamVideos()]);

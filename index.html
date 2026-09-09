@@ -18,6 +18,7 @@
     </a>
     <nav>
       <a href="#keo">Lịch kèo</a>
+      <a href="#video">Video</a>
       <a href="#noiquy">Nội quy</a>
       <button id="adminBtn" class="btn btn-outline btn-sm">Admin</button>
     </nav>
@@ -40,6 +41,15 @@
         <button id="refreshBtn" class="btn btn-ghost">↻ Cập nhật</button>
       </div>
       <div id="events" class="event-grid"><div class="empty-card">Đang tải lịch kèo…</div></div>
+    </section>
+
+
+    <section class="container section video-section" id="video">
+      <div class="section-head">
+        <div><span class="kicker">TBY</span><h2>Video TBY</h2></div>
+      </div>
+      <p class="muted video-note">Video dọc 9:16, tự phát khi cuộn tới. Video tự phát ở chế độ tắt tiếng theo quy định của trình duyệt.</p>
+      <div id="videoFeed" class="video-feed"><div class="empty-card">Đang tải video…</div></div>
     </section>
 
     <section class="container section rules" id="noiquy">
@@ -81,20 +91,32 @@
       <div class="dialog-head"><div><span class="kicker">QUẢN TRỊ</span><h2>TBY Admin</h2></div><button type="button" class="icon-btn" data-close="adminDialog">×</button></div>
 
       <div id="authPane">
-        <p class="muted">Đăng nhập bằng email. Supabase sẽ gửi Magic Link.</p>
-        <form id="loginForm" class="inline-form"><input id="adminEmail" type="email" required placeholder="email@gmail.com"/><button class="btn btn-primary">Gửi link đăng nhập</button></form>
+        <p class="muted"><b>Đăng nhập dễ hơn trên điện thoại:</b> dùng email + mật khẩu. Magic Link chỉ là phương án dự phòng.</p>
+        <div class="auth-tabs">
+          <button type="button" class="auth-tab active" data-auth-mode="login">Đăng nhập</button>
+          <button type="button" class="auth-tab" data-auth-mode="signup">Tạo tài khoản</button>
+        </div>
+        <form id="loginForm" class="auth-form">
+          <label>Email<input id="adminEmail" type="email" required autocomplete="email" placeholder="email@gmail.com"/></label>
+          <label>Mật khẩu<input id="adminPassword" type="password" minlength="6" required autocomplete="current-password" placeholder="Tối thiểu 6 ký tự"/></label>
+          <button class="btn btn-primary full-btn" type="submit">Đăng nhập</button>
+        </form>
+        <form id="signupForm" class="auth-form" hidden>
+          <label>Email<input id="signupEmail" type="email" required autocomplete="email" placeholder="email@gmail.com"/></label>
+          <label>Mật khẩu<input id="signupPassword" type="password" minlength="6" required autocomplete="new-password" placeholder="Tối thiểu 6 ký tự"/></label>
+          <label>Nhập lại mật khẩu<input id="signupPassword2" type="password" minlength="6" required autocomplete="new-password" placeholder="Nhập lại mật khẩu"/></label>
+          <button class="btn btn-primary full-btn" type="submit">Tạo tài khoản quản lý</button>
+        </form>
+        <div class="magic-fallback">
+          <span class="muted">Không nhớ mật khẩu hoặc muốn dùng link?</span>
+          <button id="magicLinkBtn" class="btn btn-ghost btn-sm" type="button">Gửi Magic Link</button>
+        </div>
         <p id="loginMsg" class="form-msg"></p>
       </div>
 
       <div id="notAdminPane" hidden class="not-admin-pane">
-        <p class="form-msg err"><b id="notAdminIdentity"></b> chưa có quyền quản lý.</p>
-        <p class="muted">Gửi yêu cầu để Owner duyệt. Trước khi được duyệt, tài khoản không thể xem dữ liệu riêng hoặc chỉnh kèo.</p>
-        <div class="request-box">
-          <label>Họ tên<input id="requestName" maxlength="60" placeholder="Tên của bạn" /></label>
-          <label>Ghi chú<textarea id="requestNote" rows="2" maxlength="180" placeholder="VD: phụ quản lý slot buổi tối"></textarea></label>
-          <button id="requestAdminBtn" class="btn btn-primary btn-sm" type="button">Gửi yêu cầu quản lý</button>
-          <p id="requestMsg" class="form-msg"></p>
-        </div>
+        <p class="form-msg ok"><b id="notAdminIdentity"></b> đã đăng nhập.</p>
+        <p class="muted">Tài khoản đang chờ Owner duyệt quyền Admin/Moderator. Bạn không cần gửi thêm yêu cầu.</p>
         <button id="notAdminLogoutBtn" class="btn btn-ghost btn-sm" type="button">Đăng xuất</button>
       </div>
 
@@ -111,13 +133,12 @@
             <label>Giờ bắt đầu *<input id="eStart" type="time" required/></label>
             <label>Giờ kết thúc *<input id="eEnd" type="time" required/></label>
             <label>Trình *<input id="eLevel" value="Yếu+ → TB-" required/></label>
-            <label>Slot nam *<input id="eMale" type="number" min="0" max="30" value="5" required/></label>
-            <label>Slot nữ *<input id="eFemale" type="number" min="0" max="30" value="5" required/></label>
+            <label class="full">Tổng số slot *<input id="eTotal" type="number" min="1" max="60" value="10" required/><small>Nam/Nữ dùng chung tổng slot, không giới hạn riêng từng giới tính.</small></label>
             <label>Phí nam (k)<input id="eMaleFee" type="number" min="0" value="65"/></label>
             <label>Phí nữ (k)<input id="eFemaleFee" type="number" min="0" value="55"/></label>
             <label class="full">Ảnh của kèo<input id="eImageFile" type="file" accept="image/*"/><small>Owner/Admin có thể upload hoặc thay ảnh kèo.</small></label>
             <div class="full image-preview-wrap"><img id="eventImagePreview" class="image-preview" alt="Xem trước ảnh kèo" hidden/><button id="removeEventImageBtn" type="button" class="btn btn-danger btn-sm" hidden>Xóa ảnh kèo</button></div>
-            <label class="full check"><input id="eOpen" type="checkbox" checked/> Mở đăng ký</label>
+            <label class="full check"><input id="eOpen" type="checkbox" checked/> Mở đăng ký <small id="eOpenHint">(Owner có thể đóng/mở đăng ký)</small></label>
             <button id="saveEventBtn" class="btn btn-primary full-btn" type="submit">Tạo kèo</button>
           </form>
           <p id="adminMsg" class="form-msg"></p>
@@ -148,6 +169,20 @@
             <button class="btn btn-primary full-btn" type="submit">Lưu giao diện website</button>
           </form>
           <p id="siteSettingsMsg" class="form-msg"></p>
+        </section>
+
+
+        <section id="videoAdminSection" class="admin-manage-section" hidden>
+          <div class="admin-manage-head"><div><span class="kicker">OWNER</span><h3>Quản lý Video TBY</h3></div><button id="videoAdminRefreshBtn" class="btn btn-ghost btn-sm" type="button">↻ Cập nhật</button></div>
+          <p class="muted admin-note">Chỉ Owner được upload/xóa/ẩn video. Nên dùng MP4 dọc 9:16, tối đa 50 MB.</p>
+          <form id="videoUploadForm" class="form-grid admin-form">
+            <label class="full">Tiêu đề video<input id="videoTitle" maxlength="100" placeholder="Highlight kèo tối thứ 7"/></label>
+            <label class="full">File video *<input id="videoFile" type="file" accept="video/mp4,video/webm,video/quicktime" required/><small>Khung hiển thị 9:16 như TikTok; video ngang sẽ được crop giữa.</small></label>
+            <label class="full check"><input id="videoVisible" type="checkbox" checked/> Hiển thị trên trang khách</label>
+            <button id="videoUploadBtn" class="btn btn-primary full-btn" type="submit">Upload video</button>
+          </form>
+          <p id="videoAdminMsg" class="form-msg"></p>
+          <div id="videoAdminList" class="admin-event-list"></div>
         </section>
 
         <section class="admin-manage-section">
