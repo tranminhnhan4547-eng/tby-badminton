@@ -177,9 +177,22 @@
           <p class="muted admin-note">Chỉ Owner được upload/xóa/ẩn video. Nên dùng MP4 dọc 9:16, tối đa 50 MB.</p>
           <form id="videoUploadForm" class="form-grid admin-form">
             <label class="full">Tiêu đề video<input id="videoTitle" maxlength="100" placeholder="Highlight kèo tối thứ 7"/></label>
-            <label class="full">File video *<input id="videoFile" type="file" accept="video/mp4,video/webm,video/quicktime" required/><small>Khung hiển thị 9:16 như TikTok; video ngang sẽ được crop giữa.</small></label>
+            <label class="full">Nguồn video
+              <select id="videoSourceType">
+                <option value="upload">Upload video từ máy/điện thoại</option>
+                <option value="link">Dán link YouTube Shorts / TikTok / Facebook Reel</option>
+              </select>
+            </label>
+            <label class="full" id="videoFileWrap">File video
+              <input id="videoFile" type="file" accept="video/mp4,video/webm,video/quicktime"/>
+              <small>Khung hiển thị 9:16 như TikTok; video ngang sẽ được crop giữa. Tối đa 50 MB.</small>
+            </label>
+            <label class="full" id="videoLinkWrap" hidden>Link video
+              <input id="videoLink" type="url" inputmode="url" placeholder="https://youtube.com/shorts/... hoặc TikTok/Facebook Reel"/>
+              <small>Web tự nhận diện nền tảng. YouTube Shorts hỗ trợ autoplay muted ổn định nhất; TikTok/Facebook phụ thuộc chính sách của nền tảng.</small>
+            </label>
             <label class="full check"><input id="videoVisible" type="checkbox" checked/> Hiển thị trên trang khách</label>
-            <button id="videoUploadBtn" class="btn btn-primary full-btn" type="submit">Upload video</button>
+            <button id="videoUploadBtn" class="btn btn-primary full-btn" type="submit">Thêm video</button>
           </form>
           <p id="videoAdminMsg" class="form-msg"></p>
           <div id="videoAdminList" class="admin-event-list"></div>
