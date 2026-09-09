@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#0b5fb3" />
+  <title>TBY Badminton Team · Đăng ký slot</title>
+  <meta name="description" content="Trang đăng ký slot vãng lai của TBY Badminton Team" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="#top" aria-label="TBY Badminton Team">
+      <img src="./assets/logo.png" alt="TBY Badminton Team" />
+    </a>
+    <nav>
+      <a href="#keo">Lịch kèo</a>
+      <a href="#noiquy">Nội quy</a>
+      <button id="adminBtn" class="btn btn-outline btn-sm">Admin</button>
+    </nav>
+  </header>
+
+  <main id="top">
+    <section class="hero">
+      <div class="hero-overlay"></div>
+      <div class="hero-content container">
+        <span class="eyebrow">TEAM BAY YARD+ · TRAIN · BATTLE · YIELD</span>
+        <h1>Chơi hết mình.<br/>Kết nối bền lâu.</h1>
+        <p>Đăng ký slot vãng lai nhanh, xem chỗ trống theo thời gian thực và nhận thông tin kèo ngay trên điện thoại.</p>
+        <a class="btn btn-primary" href="#keo">Xem kèo hiện tại ↓</a>
+      </div>
+    </section>
+
+    <section class="container section" id="keo">
+      <div class="section-head">
+        <div>
+          <span class="kicker">LỊCH ĐÁNH</span>
+          <h2>Kèo sắp tới</h2>
+        </div>
+        <button id="refreshBtn" class="btn btn-ghost">↻ Cập nhật</button>
+      </div>
+      <div id="events" class="event-grid">
+        <div class="empty-card">Đang tải lịch kèo…</div>
+      </div>
+    </section>
+
+    <section class="container section rules" id="noiquy">
+      <div class="section-head"><div><span class="kicker">TBY</span><h2>Nội quy nhanh</h2></div></div>
+      <div class="rule-grid">
+        <article><b>01</b><h3>Đúng giờ</h3><p>Có mặt trước giờ đánh 10 phút để khởi động và xếp sân.</p></article>
+        <article><b>02</b><h3>Báo hủy sớm</h3><p>Nếu bận, báo host sớm để nhường slot cho người khác.</p></article>
+        <article><b>03</b><h3>Đúng trình</h3><p>Chọn trình gần nhất để host ghép trận cân bằng và vui hơn.</p></article>
+        <article><b>04</b><h3>Fair-play</h3><p>Ưu tiên vui vẻ, lịch sự, xoay sân công bằng và tôn trọng đồng đội.</p></article>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="container footer-inner">
+      <img src="./assets/logo.png" alt="TBY" />
+      <div><strong>Good Game. Better People.</strong><span>© 2026 TBY Badminton Team</span></div>
+    </div>
+  </footer>
+
+  <dialog id="registerDialog" class="dialog">
+    <form id="registerForm" method="dialog" class="dialog-card">
+      <div class="dialog-head"><div><span class="kicker">ĐĂNG KÝ</span><h2 id="registerTitle">Đăng ký slot</h2></div><button type="button" class="icon-btn" data-close="registerDialog">×</button></div>
+      <input type="hidden" id="eventId" />
+      <div id="eventSummary" class="summary-box"></div>
+      <div class="form-grid">
+        <label class="full">Họ và tên *<input id="fullName" required maxlength="50" placeholder="Nguyễn Văn A" /></label>
+        <label>Giới tính *<select id="gender" required><option value="male">Nam</option><option value="female">Nữ</option></select></label>
+        <label>Trình độ *<select id="level" required><option>Yếu</option><option>Yếu+</option><option>TB-</option><option>TB</option><option>TB+</option><option>Khá</option></select></label>
+        <label class="full">Số điện thoại / Zalo *<input id="phone" required maxlength="30" placeholder="09xx xxx xxx" /></label>
+        <label class="full">Ghi chú<textarea id="note" rows="3" maxlength="200" placeholder="VD: đi 2 người, muốn đánh đôi nam nữ…"></textarea></label>
+      </div>
+      <p id="registerMsg" class="form-msg"></p>
+      <button id="submitRegister" class="btn btn-primary full-btn" type="submit">🏸 Đăng ký slot</button>
+    </form>
+  </dialog>
+
+  <dialog id="adminDialog" class="dialog">
+    <div class="dialog-card admin-card">
+      <div class="dialog-head"><div><span class="kicker">QUẢN TRỊ</span><h2>Admin TBY</h2></div><button type="button" class="icon-btn" data-close="adminDialog">×</button></div>
+      <div id="authPane">
+        <p class="muted">Đăng nhập bằng email được cấp quyền admin. Supabase sẽ gửi magic link.</p>
+        <form id="loginForm" class="inline-form"><input id="adminEmail" type="email" required placeholder="admin@email.com"/><button class="btn btn-primary">Gửi link đăng nhập</button></form>
+        <p id="loginMsg" class="form-msg"></p>
+      </div>
+      <div id="adminPane" hidden>
+        <div class="admin-toolbar"><span id="adminIdentity"></span><button id="logoutBtn" class="btn btn-ghost btn-sm">Đăng xuất</button></div>
+        <form id="eventForm" class="form-grid admin-form">
+          <label class="full">Tên kèo *<input id="eTitle" required placeholder="Kèo tối nay"/></label>
+          <label class="full">Sân / địa điểm *<input id="eVenue" required placeholder="Sân Victory · Thủ Đức"/></label>
+          <label>Ngày *<input id="eDate" type="date" required/></label>
+          <label>Giờ bắt đầu *<input id="eStart" type="time" required/></label>
+          <label>Giờ kết thúc *<input id="eEnd" type="time" required/></label>
+          <label>Trình *<input id="eLevel" value="Yếu+ → TB-" required/></label>
+          <label>Slot nam *<input id="eMale" type="number" min="0" max="30" value="5" required/></label>
+          <label>Slot nữ *<input id="eFemale" type="number" min="0" max="30" value="5" required/></label>
+          <label>Phí nam (k) <input id="eMaleFee" type="number" min="0" value="65"/></label>
+          <label>Phí nữ (k) <input id="eFemaleFee" type="number" min="0" value="55"/></label>
+          <label class="full check"><input id="eOpen" type="checkbox" checked/> Mở đăng ký ngay</label>
+          <button class="btn btn-primary full-btn" type="submit">Tạo kèo</button>
+        </form>
+        <p id="adminMsg" class="form-msg"></p>
+      </div>
+    </div>
+  </dialog>
+
+  <script src="./config.js"></script>
+  <script type="module" src="./app.js"></script>
+</body>
+</html>
