@@ -2,7 +2,16 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const cfg = window.TBY_CONFIG || {};
 const isConfigured = cfg.SUPABASE_URL && !cfg.SUPABASE_URL.includes('YOUR_PROJECT') && cfg.SUPABASE_ANON_KEY && !cfg.SUPABASE_ANON_KEY.includes('YOUR_ANON');
-const supabase = isConfigured ? createClient(cfg.SUPABASE_URL, cfg.SUPABASE_ANON_KEY) : null;
+const supabase = isConfigured ? createClient(cfg.SUPABASE_URL, cfg.SUPABASE_ANON_KEY, {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+    detectSessionInUrl: true,
+    flowType: 'implicit',
+    storage: window.localStorage
+  }
+}) : null;
+const TBY_SITE_URL = 'https://tranminhnhan4547-eng.github.io/tby-badminton/';
 const $ = s => document.querySelector(s);
 const esc = (v='') => String(v).replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
 const fmtDate = d => new Intl.DateTimeFormat('vi-VN',{weekday:'short',day:'2-digit',month:'2-digit',year:'numeric'}).format(new Date(d+'T00:00:00'));
@@ -92,8 +101,79 @@ async function syncAuth(){
   if(currentAdminRole==='owner'){$('#ownerSection').hidden=false;$('#siteSettingsSection').hidden=false;await Promise.all([loadOwnerAccess(),populateSettingsForm()]);}
   await loadAdminEvents();
 }
-$('#loginForm').addEventListener('submit',async ev=>{ev.preventDefault();const email=$('#adminEmail').value.trim();const {error}=await supabase.auth.signInWithOtp({email,options:{emailRedirectTo:location.origin+location.pathname}});const m=$('#loginMsg');m.className=`form-msg ${error?'err':'ok'}`;m.textContent=error?error.message:'Đã gửi Magic Link. Kiểm tra email.';});
-$('#logoutBtn').addEventListener('click',async()=>{await supabase.auth.signOut();await syncAuth();});$('#notAdminLogoutBtn').addEventListener('click',async()=>{await supabase.auth.signOut();await syncAuth();});supabase?.auth.onAuthStateChange(()=>syncAuth());
+$('#loginForm').addEventListener('submit',async ev=>{
+  ev.preventDefault();
+  const email=$('#adminEmail').value.trim();
+  const m=$('#loginMsg');
+  if(!email){m.className='form-msg err';m.textContent='Nhập email trước.';return;}
+  m.className='form-msg';m.textContent='Đang gửi link đăng nhập…';
+  const {error}=await supabase.auth.signInWithOtp({
+    email,
+    options:{
+      emailRedirectTo:TBY_SITE_URL,
+      shouldCreateUser:true
+    }
+  });
+  m.className=`form-msg ${error?'err':'ok'}`;
+  if(error){
+    m.textContent=(error.message||'').toLowerCase().includes('rate limit')
+      ? 'Supabase đang giới hạn gửi email. Chờ một lúc rồi thử lại 1 lần.'
+      : error.message;
+  }else{
+    m.textContent='Đã gửi link đăng nhập. Mở email mới nhất và bấm link.';
+  }
+});
+$('#logoutBtn').addEventListener('click',async()=>{await supabase.auth.signOut();await syncAuth();});
+$('#notAdminLogoutBtn').addEventListener('click',async()=>{await supabase.auth.signOut();await syncAuth();});
+supabase?.auth.onAuthStateChange(async(event)=>{
+  if(event==='SIGNED_IN'){
+    // Magic Link trên điện thoại: tự mở lại khu Admin sau khi session được nhận.
+    await syncAuth();
+    if(!$('#adminDialog').open) $('#adminDialog').showModal();
+  }else if(event==='SIGNED_OUT'){
+    await syncAuth();
+  }
+});
+
+async function recoverMobileAuthSession(){
+  if(!supabase)return;
+  try{
+    // Magic Link kiểu implicit chứa access_token trong hash. Cách này hoạt động
+    // ngay cả khi yêu cầu link ở Safari nhưng Gmail mở link bằng browser tích hợp.
+    const hash=new URLSearchParams(location.hash.replace(/^#/,''));
+    const access_token=hash.get('access_token');
+    const refresh_token=hash.get('refresh_token');
+    if(access_token && refresh_token){
+      const {error}=await supabase.auth.setSession({access_token,refresh_token});
+      if(error)throw error;
+      history.replaceState({},document.title,TBY_SITE_URL);
+      await syncAuth();
+      if(!$('#adminDialog').open) $('#adminDialog').showModal();
+      return;
+    }
+
+    // Hỗ trợ callback dạng ?code= nếu Supabase/provider trả PKCE code.
+    const url=new URL(location.href);
+    const code=url.searchParams.get('code');
+    if(code){
+      const {error}=await supabase.auth.exchangeCodeForSession(code);
+      if(!error){
+        history.replaceState({},document.title,TBY_SITE_URL);
+        await syncAuth();
+        if(!$('#adminDialog').open) $('#adminDialog').showModal();
+        return;
+      }
+    }
+
+    // Nếu session đã được Supabase tự phục hồi từ localStorage, nhận luôn.
+    const {data:{session}}=await supabase.auth.getSession();
+    if(session?.user){
+      await syncAuth();
+    }
+  }catch(err){
+    console.error('TBY mobile auth recovery:',err);
+  }
+}
 
 function resetEventForm(){
   $('#eventForm').reset();$('#editingEventId').value='';$('#eLevel').value='Yếu+ → TB-';$('#eMale').value=5;$('#eFemale').value=5;$('#eMaleFee').value=65;$('#eFemaleFee').value=55;$('#eOpen').checked=true;$('#eventFormHeading').textContent='Tạo kèo mới';$('#saveEventBtn').textContent='Tạo kèo';$('#cancelEditBtn').hidden=true;$('#eventImagePreview').hidden=true;$('#removeEventImageBtn').hidden=true;$('#eImageFile').value='';pendingRemoveEventImage=false;
@@ -153,4 +233,5 @@ async function revokeManager(userId){if(!confirm('Thu hồi toàn bộ quyền q
 async function populateSettingsForm(){await loadSiteSettings();const s=currentSettings||fallbackSettings;$('#sHeroTitle').value=s.hero_title||'';$('#sHeroSubtitle').value=s.hero_subtitle||'';$('#sRules').value=s.rules_text||'';$('#sTikTok').value=s.tiktok_url||'';$('#sYouTube').value=s.youtube_url||'';$('#sFacebook').value=s.facebook_url||'';$('#sZalo').value=s.zalo_url||'';}
 $('#siteSettingsForm').addEventListener('submit',async ev=>{ev.preventDefault();if(currentAdminRole!=='owner')return alert('Chỉ Owner được chỉnh giao diện website.');const m=$('#siteSettingsMsg');m.textContent='Đang lưu…';m.className='form-msg';try{let s={...(currentSettings||fallbackSettings),hero_title:$('#sHeroTitle').value.trim(),hero_subtitle:$('#sHeroSubtitle').value.trim(),rules_text:$('#sRules').value.trim(),tiktok_url:$('#sTikTok').value.trim(),youtube_url:$('#sYouTube').value.trim(),facebook_url:$('#sFacebook').value.trim(),zalo_url:$('#sZalo').value.trim()};const files=[['sLogoFile','logo_url','site/logo'],['sHeroFile','hero_image_url','site/hero'],['sBackgroundFile','background_image_url','site/background']];for(const [input,key,path] of files){const f=$(`#${input}`).files[0];if(f){if(s[key])await removeMediaUrl(s[key]);s[key]=await uploadMedia(f,`${path}-${Date.now()}`);}}const {error}=await supabase.from('site_settings').upsert({id:1,...s,updated_at:new Date().toISOString()});if(error)throw error;m.className='form-msg ok';m.textContent='Đã cập nhật website.';currentSettings=s;applySettings(s);ev.target.querySelectorAll('input[type=file]').forEach(x=>x.value='');}catch(err){m.className='form-msg err';m.textContent=err.message||String(err);}});
 
+await recoverMobileAuthSession();
 await Promise.all([loadSiteSettings(),loadEvents()]);
