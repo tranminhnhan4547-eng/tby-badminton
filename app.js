@@ -101,37 +101,69 @@ $('#refreshBtn').addEventListener('click',loadEvents);$('#adminRefreshBtn').addE
 
 async function syncAuth(){
   const {data:{user}}=await supabase.auth.getUser();currentAdminUser=null;currentAdminRole=null;
-  $('#authPane').hidden=!!user;$('#adminPane').hidden=true;$('#notAdminPane').hidden=true;$('#ownerSection').hidden=true;$('#siteSettingsSection').hidden=true;
+  $('#authPane').hidden=!!user;$('#adminPane').hidden=true;$('#notAdminPane').hidden=true;$('#ownerSection').hidden=true;$('#siteSettingsSection').hidden=true;$('#videoAdminSection').hidden=true;
   if(!user)return;
   const {data:adminRow}=await supabase.from('admin_users').select('user_id,role').eq('user_id',user.id).maybeSingle();
-  if(!adminRow){$('#notAdminPane').hidden=false;$('#notAdminIdentity').textContent=user.email||'Tài khoản này';await loadMyRequest();return;}
+  if(!adminRow){$('#notAdminPane').hidden=false;$('#notAdminIdentity').textContent=user.email||'Tài khoản này';return;}
   currentAdminUser=user;currentAdminRole=adminRow.role||'admin';$('#adminPane').hidden=false;$('#adminIdentity').textContent=`${user.email||'Quản lý'} · ${currentAdminRole.toUpperCase()}`;
   $('#eventEditorSection').hidden=currentAdminRole==='moderator';
   $('#eOpen').disabled=currentAdminRole!=='owner';$('#eOpenHint').textContent=currentAdminRole==='owner'?'(Bạn có quyền đóng/mở đăng ký)':'(Chỉ Owner được đóng/mở đăng ký)';
-  if(currentAdminRole==='owner'){$('#ownerSection').hidden=false;$('#siteSettingsSection').hidden=false;await Promise.all([loadOwnerAccess(),populateSettingsForm()]);}
+  if(currentAdminRole==='owner'){$('#ownerSection').hidden=false;$('#siteSettingsSection').hidden=false;$('#videoAdminSection').hidden=false;await Promise.all([loadOwnerAccess(),populateSettingsForm(),loadAdminVideos()]);}
   await loadAdminEvents();
 }
+document.querySelectorAll('[data-auth-mode]').forEach(btn=>btn.addEventListener('click',()=>{
+  const mode=btn.dataset.authMode;
+  document.querySelectorAll('[data-auth-mode]').forEach(x=>x.classList.toggle('active',x===btn));
+  $('#loginForm').hidden=mode!=='login';
+  $('#signupForm').hidden=mode!=='signup';
+  $('#loginMsg').textContent='';
+}));
+
 $('#loginForm').addEventListener('submit',async ev=>{
   ev.preventDefault();
   const email=$('#adminEmail').value.trim();
+  const password=$('#adminPassword').value;
   const m=$('#loginMsg');
-  if(!email){m.className='form-msg err';m.textContent='Nhập email trước.';return;}
-  m.className='form-msg';m.textContent='Đang gửi link đăng nhập…';
-  const {error}=await supabase.auth.signInWithOtp({
-    email,
-    options:{
-      emailRedirectTo:TBY_SITE_URL,
-      shouldCreateUser:true
-    }
-  });
+  if(!email||!password){m.className='form-msg err';m.textContent='Nhập email và mật khẩu.';return;}
+  m.className='form-msg';m.textContent='Đang đăng nhập…';
+  const {error}=await supabase.auth.signInWithPassword({email,password});
   m.className=`form-msg ${error?'err':'ok'}`;
   if(error){
-    m.textContent=(error.message||'').toLowerCase().includes('rate limit')
-      ? 'Supabase đang giới hạn gửi email. Chờ một lúc rồi thử lại 1 lần.'
-      : error.message;
-  }else{
-    m.textContent='Đã gửi link đăng nhập. Mở email mới nhất và bấm link.';
+    m.textContent=(error.message||'').includes('Invalid login credentials')?'Email hoặc mật khẩu chưa đúng. Nếu mới tạo tài khoản, hãy xác nhận email 1 lần trước.':error.message;
+    return;
   }
+  m.textContent='Đăng nhập thành công.';
+  await syncAuth();
+});
+
+$('#signupForm').addEventListener('submit',async ev=>{
+  ev.preventDefault();
+  const email=$('#signupEmail').value.trim();
+  const password=$('#signupPassword').value;
+  const password2=$('#signupPassword2').value;
+  const m=$('#loginMsg');
+  if(password.length<6){m.className='form-msg err';m.textContent='Mật khẩu cần ít nhất 6 ký tự.';return;}
+  if(password!==password2){m.className='form-msg err';m.textContent='Hai mật khẩu không giống nhau.';return;}
+  m.className='form-msg';m.textContent='Đang tạo tài khoản…';
+  const {data,error}=await supabase.auth.signUp({email,password,options:{emailRedirectTo:TBY_SITE_URL}});
+  if(error){m.className='form-msg err';m.textContent=error.message;return;}
+  m.className='form-msg ok';
+  if(data.session){
+    m.textContent='Tạo tài khoản thành công. Tài khoản đang chờ Owner duyệt.';
+    await syncAuth();
+  }else{
+    m.textContent='Đã tạo tài khoản. Nếu Supabase gửi email xác nhận, chỉ cần xác nhận 1 lần; sau đó đăng nhập bằng email + mật khẩu.';
+  }
+});
+
+$('#magicLinkBtn').addEventListener('click',async()=>{
+  const email=($('#adminEmail').value||$('#signupEmail').value||'').trim();
+  const m=$('#loginMsg');
+  if(!email){m.className='form-msg err';m.textContent='Nhập email trước rồi bấm Magic Link.';return;}
+  m.className='form-msg';m.textContent='Đang gửi Magic Link…';
+  const {error}=await supabase.auth.signInWithOtp({email,options:{emailRedirectTo:TBY_SITE_URL,shouldCreateUser:true}});
+  m.className=`form-msg ${error?'err':'ok'}`;
+  m.textContent=error?((error.message||'').toLowerCase().includes('rate limit')?'Supabase đang giới hạn gửi email. Chờ một lúc rồi thử lại.':error.message):'Đã gửi Magic Link. Hãy mở email mới nhất.';
 });
 $('#logoutBtn').addEventListener('click',async()=>{await supabase.auth.signOut();await syncAuth();});
 $('#notAdminLogoutBtn').addEventListener('click',async()=>{await supabase.auth.signOut();await syncAuth();});
@@ -253,8 +285,6 @@ async function deleteEvent(id){if(!['owner','admin'].includes(currentAdminRole))
 async function loadAdminPlayers(eventId){const box=$(`#players-${eventId}`);if(!box)return;if(!box.hidden){box.hidden=true;return;}box.hidden=false;box.innerHTML='<div class="admin-empty">Đang tải danh sách…</div>';const {data,error}=await supabase.rpc('admin_get_registrations',{p_event_id:eventId});if(error){box.innerHTML=`<div class="admin-empty">${esc(error.message)}</div>`;return;}if(!data?.length){box.innerHTML='<div class="admin-empty">Chưa có người đăng ký.</div>';return;}box.innerHTML=data.map(r=>`<div class="admin-player-row"><div><strong>${esc(r.full_name)}</strong><span>${r.gender==='male'?'Nam':'Nữ'} · ${esc(r.level)} · ${esc(r.phone||'')}</span>${r.note?`<small>Ghi chú: ${esc(r.note)}</small>`:''}<small>Đăng ký: ${new Date(r.created_at).toLocaleString('vi-VN')}</small></div><button type="button" class="btn btn-danger btn-sm" data-delete-registration="${r.id}" data-event-id="${eventId}" data-name="${esc(r.full_name)}">Xóa slot</button></div>`).join('');box.querySelectorAll('[data-delete-registration]').forEach(b=>b.addEventListener('click',()=>deleteRegistration(b.dataset.deleteRegistration,b.dataset.eventId,b.dataset.name)));}
 async function deleteRegistration(id,eventId,name){if(!confirm(`Xóa slot đăng ký của “${name}”?`))return;const {error}=await supabase.from('registrations').delete().eq('id',id);if(error)return alert(error.message);await Promise.all([loadEvents(),loadAdminEvents()]);const btn=document.querySelector(`[data-admin-players="${eventId}"]`);if(btn)await loadAdminPlayers(eventId);}
 
-async function loadMyRequest(){const {data:{user}}=await supabase.auth.getUser();if(!user)return;const {data}=await supabase.from('admin_requests').select('status').eq('user_id',user.id).maybeSingle();const m=$('#requestMsg');if(data?.status==='pending'){m.className='form-msg ok';m.textContent='Yêu cầu đang chờ Owner duyệt.';$('#requestAdminBtn').disabled=true;}else if(data?.status==='rejected'){m.className='form-msg err';m.textContent='Yêu cầu trước đã bị từ chối. Bạn có thể gửi lại.';$('#requestAdminBtn').disabled=false;}else{m.textContent='';$('#requestAdminBtn').disabled=false;}}
-$('#requestAdminBtn').addEventListener('click',async()=>{const full_name=$('#requestName').value.trim();if(!full_name)return alert('Nhập họ tên trước.');const {error}=await supabase.rpc('submit_admin_request',{p_full_name:full_name,p_note:$('#requestNote').value.trim()});const m=$('#requestMsg');m.className=`form-msg ${error?'err':'ok'}`;m.textContent=error?error.message:'Đã gửi yêu cầu. Chờ Owner duyệt.';if(!error)await loadMyRequest();});
 $('#ownerRefreshBtn').addEventListener('click',loadOwnerAccess);async function loadOwnerAccess(){if(currentAdminRole!=='owner')return;await Promise.all([loadPendingAdmins(),loadManagers()]);}
 async function loadPendingAdmins(){const root=$('#pendingAdminList');root.innerHTML='<div class="admin-empty">Đang tải yêu cầu…</div>';const {data,error}=await supabase.rpc('owner_list_admin_requests');if(error){root.innerHTML=`<div class="admin-empty">${esc(error.message)}</div>`;return;}if(!data?.length){root.innerHTML='<div class="admin-empty">Không có tài khoản chờ duyệt.</div>';return;}root.innerHTML=data.map(r=>`<article class="admin-event-item manager-row"><div class="who"><strong>${esc(r.full_name||r.email||'Tài khoản')}</strong><span>${esc(r.email||'')} · ${new Date(r.created_at).toLocaleString('vi-VN')}</span>${r.note?`<span>${esc(r.note)}</span>`:''}</div><div class="manager-actions"><select class="role-select" id="approve-role-${r.user_id}"><option value="admin">Admin</option><option value="moderator">Moderator</option></select><button class="btn btn-success btn-sm" data-approve-user="${r.user_id}">✓ Duyệt</button><button class="btn btn-danger btn-sm" data-reject-user="${r.user_id}">Từ chối</button></div></article>`).join('');root.querySelectorAll('[data-approve-user]').forEach(b=>b.addEventListener('click',()=>approveManager(b.dataset.approveUser)));root.querySelectorAll('[data-reject-user]').forEach(b=>b.addEventListener('click',()=>rejectManager(b.dataset.rejectUser)));}
 async function approveManager(userId){const role=$(`#approve-role-${userId}`).value;if(!confirm(`Duyệt với quyền ${role.toUpperCase()}?`))return;const {error}=await supabase.rpc('owner_approve_admin_request',{p_user_id:userId,p_role:role});if(error)return alert(error.message);await loadOwnerAccess();}
@@ -263,8 +293,231 @@ async function loadManagers(){const root=$('#managerList');root.innerHTML='<div 
 async function changeManagerRole(userId){const role=document.querySelector(`[data-role-user="${userId}"]`).value;const {error}=await supabase.rpc('owner_change_manager_role',{p_user_id:userId,p_role:role});if(error)return alert(error.message);await loadManagers();}
 async function revokeManager(userId){if(!confirm('Thu hồi toàn bộ quyền quản lý?'))return;const {error}=await supabase.rpc('owner_revoke_manager',{p_user_id:userId});if(error)return alert(error.message);await loadOwnerAccess();}
 
+
+
+let videoObserver=null;
+
+function getVideoPlatform(url=''){
+  const u=String(url).trim();
+  if(/youtu\.be|youtube\.com/i.test(u)) return 'youtube';
+  if(/tiktok\.com/i.test(u)) return 'tiktok';
+  if(/facebook\.com|fb\.watch/i.test(u)) return 'facebook';
+  return 'link';
+}
+function youtubeId(url=''){
+  try{
+    const u=new URL(url);
+    if(u.hostname.includes('youtu.be')) return u.pathname.split('/').filter(Boolean)[0]||'';
+    const shorts=u.pathname.match(/\/shorts\/([^/?#]+)/);
+    if(shorts) return shorts[1];
+    const embed=u.pathname.match(/\/embed\/([^/?#]+)/);
+    if(embed) return embed[1];
+    return u.searchParams.get('v')||'';
+  }catch{return '';}
+}
+function tiktokId(url=''){
+  const m=String(url).match(/\/video\/(\d+)/);
+  return m?m[1]:'';
+}
+function externalVideoMarkup(v){
+  const url=v.source_url||v.video_url||'';
+  const type=v.source_type&&v.source_type!=='upload'?v.source_type:getVideoPlatform(url);
+
+  if(type==='youtube'){
+    const id=youtubeId(url);
+    if(!id) return `<a class="video-link-fallback" href="${esc(url)}" target="_blank" rel="noopener">Mở video YouTube ↗</a>`;
+    const src=`https://www.youtube-nocookie.com/embed/${encodeURIComponent(id)}?autoplay=1&mute=1&loop=1&playlist=${encodeURIComponent(id)}&playsinline=1&controls=1&rel=0`;
+    return `<iframe class="tby-embed tby-external-video" data-src="${esc(src)}" title="${esc(v.title||'Video TBY')}" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen loading="lazy"></iframe>`;
+  }
+
+  if(type==='tiktok'){
+    const id=tiktokId(url);
+    if(!id) return `<a class="video-link-fallback" href="${esc(url)}" target="_blank" rel="noopener">Mở video TikTok ↗</a>`;
+    const src=`https://www.tiktok.com/player/v1/${encodeURIComponent(id)}?autoplay=1&loop=1&music_info=1&description=1`;
+    return `<iframe class="tby-embed tby-external-video" data-src="${esc(src)}" title="${esc(v.title||'Video TBY')}" allow="autoplay; encrypted-media" allowfullscreen loading="lazy"></iframe>`;
+  }
+
+  if(type==='facebook'){
+    const src=`https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(url)}&show_text=false&autoplay=true&mute=true`;
+    return `<iframe class="tby-embed tby-external-video" data-src="${esc(src)}" title="${esc(v.title||'Video TBY')}" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen loading="lazy"></iframe>`;
+  }
+
+  return `<a class="video-link-fallback" href="${esc(url)}" target="_blank" rel="noopener">Mở video ↗</a>`;
+}
+
+function setupVideoAutoplay(){
+  if(videoObserver)videoObserver.disconnect();
+  const media=[...document.querySelectorAll('.tby-video,.tby-external-video')];
+  if(!('IntersectionObserver' in window)) {
+    document.querySelectorAll('.tby-external-video[data-src]').forEach(f=>{ if(!f.src) f.src=f.dataset.src; });
+    return;
+  }
+
+  videoObserver=new IntersectionObserver(entries=>{
+    entries.forEach(entry=>{
+      const el=entry.target;
+      const active=entry.isIntersecting && entry.intersectionRatio>=0.62;
+
+      if(el.tagName==='VIDEO'){
+        if(active){
+          document.querySelectorAll('.tby-video').forEach(other=>{if(other!==el)other.pause();});
+          el.play().catch(()=>{});
+        } else el.pause();
+      } else if(el.tagName==='IFRAME'){
+        // Chỉ nạp embed khi người dùng cuộn gần tới để giảm tải.
+        if(active && !el.src && el.dataset.src) el.src=el.dataset.src;
+      }
+    });
+  },{threshold:[0,.62,1]});
+
+  media.forEach(v=>videoObserver.observe(v));
+}
+
+function publicVideoCard(v){
+  const type=v.source_type||'upload';
+  const media=type==='upload'
+    ? `<video class="tby-video" src="${esc(v.video_url)}" muted loop playsinline preload="metadata"></video><button type="button" class="video-sound" data-video-sound>🔇 Bật tiếng</button>`
+    : externalVideoMarkup(v);
+  const badge=type==='upload'?'TBY':type.toUpperCase();
+  return `<article class="video-card">
+    <div class="video-frame">${media}<span class="video-source-badge">${esc(badge)}</span></div>
+    <h3>${esc(v.title||'TBY')}</h3>
+  </article>`;
+}
+
+async function loadTeamVideos(){
+  const root=$('#videoFeed');if(!root||!supabase)return;
+  root.innerHTML='<div class="empty-card">Đang tải video…</div>';
+  const {data,error}=await supabase.from('team_videos').select('*').eq('is_visible',true).order('sort_order').order('created_at',{ascending:false});
+  if(error){root.innerHTML=`<div class="empty-card">${esc(error.message)}</div>`;return;}
+  if(!data?.length){root.innerHTML='<div class="empty-card">Chưa có video TBY.</div>';return;}
+  root.innerHTML=data.map(publicVideoCard).join('');
+  root.querySelectorAll('[data-video-sound]').forEach(btn=>btn.addEventListener('click',()=>{
+    const v=btn.parentElement.querySelector('video');
+    v.muted=!v.muted;
+    btn.textContent=v.muted?'🔇 Bật tiếng':'🔊 Tắt tiếng';
+    if(v.paused)v.play().catch(()=>{});
+  }));
+  setupVideoAutoplay();
+}
+
+function adminVideoPreview(v){
+  const type=v.source_type||'upload';
+  if(type==='upload') return `<video src="${esc(v.video_url)}" muted playsinline preload="metadata"></video>`;
+  const label=type==='youtube'?'YouTube':type==='tiktok'?'TikTok':type==='facebook'?'Facebook':'Link';
+  return `<div class="video-platform-preview">${esc(label)}</div>`;
+}
+async function loadAdminVideos(){
+  if(currentAdminRole!=='owner')return;
+  const root=$('#videoAdminList');root.innerHTML='<div class="admin-empty">Đang tải video…</div>';
+  const {data,error}=await supabase.from('team_videos').select('*').order('sort_order').order('created_at',{ascending:false});
+  if(error){root.innerHTML=`<div class="admin-empty">${esc(error.message)}</div>`;return;}
+  if(!data?.length){root.innerHTML='<div class="admin-empty">Chưa có video.</div>';return;}
+  root.innerHTML=data.map(v=>{
+    const type=v.source_type||'upload';
+    const srcLabel=type==='upload'?'Upload':type==='youtube'?'YouTube':type==='tiktok'?'TikTok':type==='facebook'?'Facebook':'Link';
+    return `<article class="admin-event-item video-admin-row">
+      <div class="video-admin-preview">${adminVideoPreview(v)}</div>
+      <div class="who"><strong>${esc(v.title||'Video TBY')}</strong><span>${esc(srcLabel)} · ${v.is_visible?'Đang hiển thị':'Đang ẩn'} · ${new Date(v.created_at).toLocaleString('vi-VN')}</span></div>
+      <div class="manager-actions">
+        <button class="btn btn-ghost btn-sm" data-video-toggle="${v.id}" data-visible="${!!v.is_visible}">${v.is_visible?'Ẩn video':'Hiện video'}</button>
+        <button class="btn btn-danger btn-sm" data-video-delete="${v.id}" data-url="${esc(v.video_url||'')}" data-type="${esc(type)}">Xóa</button>
+      </div>
+    </article>`;
+  }).join('');
+  root.querySelectorAll('[data-video-toggle]').forEach(b=>b.addEventListener('click',()=>toggleVideoVisibility(b.dataset.videoToggle,b.dataset.visible==='true')));
+  root.querySelectorAll('[data-video-delete]').forEach(b=>b.addEventListener('click',()=>deleteTeamVideo(b.dataset.videoDelete,b.dataset.url,b.dataset.type)));
+}
+
+$('#videoAdminRefreshBtn').addEventListener('click',loadAdminVideos);
+
+const videoSourceType=$('#videoSourceType');
+if(videoSourceType){
+  videoSourceType.addEventListener('change',()=>{
+    const useLink=videoSourceType.value==='link';
+    $('#videoFileWrap').hidden=useLink;
+    $('#videoLinkWrap').hidden=!useLink;
+    $('#videoFile').required=!useLink;
+    $('#videoLink').required=useLink;
+  });
+}
+
+$('#videoUploadForm').addEventListener('submit',async ev=>{
+  ev.preventDefault();
+  if(currentAdminRole!=='owner')return alert('Chỉ Owner được thêm video.');
+
+  const mode=$('#videoSourceType')?.value||'upload';
+  const file=$('#videoFile').files[0];
+  const link=$('#videoLink')?.value.trim()||'';
+  const m=$('#videoAdminMsg'),btn=$('#videoUploadBtn');
+
+  if(mode==='upload'&&!file){m.className='form-msg err';m.textContent='Hãy chọn file video.';return;}
+  if(mode==='link'&&!link){m.className='form-msg err';m.textContent='Hãy dán link video.';return;}
+  if(file&&file.size>50*1024*1024){m.className='form-msg err';m.textContent='Video vượt quá 50 MB.';return;}
+
+  btn.disabled=true;btn.textContent='Đang thêm…';m.className='form-msg';
+
+  try{
+    let row={
+      title:$('#videoTitle').value.trim()||'Video TBY',
+      is_visible:$('#videoVisible').checked,
+      source_type:'upload',
+      source_url:null,
+      video_url:''
+    };
+
+    if(mode==='upload'){
+      m.textContent='Đang tải video lên Supabase…';
+      const url=await uploadMedia(file,`videos/${crypto.randomUUID?crypto.randomUUID():Date.now()}`);
+      row.video_url=url;
+      row.source_type='upload';
+    }else{
+      const platform=getVideoPlatform(link);
+      if(!['youtube','tiktok','facebook'].includes(platform)){
+        throw new Error('Hiện hỗ trợ link YouTube, TikTok hoặc Facebook.');
+      }
+      row.source_type=platform;
+      row.source_url=link;
+      // Giữ video_url có giá trị để tương thích schema cũ NOT NULL.
+      row.video_url=link;
+      m.textContent=`Đang thêm link ${platform}…`;
+    }
+
+    const {error}=await supabase.from('team_videos').insert(row);
+    if(error){
+      if(mode==='upload'&&row.video_url) await removeMediaUrl(row.video_url);
+      throw error;
+    }
+
+    ev.target.reset();
+    $('#videoVisible').checked=true;
+    if(videoSourceType){
+      videoSourceType.value='upload';
+      videoSourceType.dispatchEvent(new Event('change'));
+    }
+    m.className='form-msg ok';m.textContent='Đã thêm video.';
+    await Promise.all([loadTeamVideos(),loadAdminVideos()]);
+  }catch(err){m.className='form-msg err';m.textContent=err.message||String(err);}
+
+  btn.disabled=false;btn.textContent='Thêm video';
+});
+
+async function toggleVideoVisibility(id,isVisible){
+  if(currentAdminRole!=='owner')return;
+  const {error}=await supabase.from('team_videos').update({is_visible:!isVisible,updated_at:new Date().toISOString()}).eq('id',id);
+  if(error)return alert(error.message);
+  await Promise.all([loadTeamVideos(),loadAdminVideos()]);
+}
+async function deleteTeamVideo(id,url,type='upload'){
+  if(currentAdminRole!=='owner'||!confirm('Xóa video này khỏi TBY?'))return;
+  const {error}=await supabase.from('team_videos').delete().eq('id',id);
+  if(error)return alert(error.message);
+  if(type==='upload'&&url) await removeMediaUrl(url);
+  await Promise.all([loadTeamVideos(),loadAdminVideos()]);
+}
+
 async function populateSettingsForm(){await loadSiteSettings();const s=currentSettings||fallbackSettings;$('#sHeroTitle').value=s.hero_title||'';$('#sHeroSubtitle').value=s.hero_subtitle||'';$('#sRules').value=s.rules_text||'';$('#sTikTok').value=s.tiktok_url||'';$('#sYouTube').value=s.youtube_url||'';$('#sFacebook').value=s.facebook_url||'';$('#sZalo').value=s.zalo_url||'';}
 $('#siteSettingsForm').addEventListener('submit',async ev=>{ev.preventDefault();if(currentAdminRole!=='owner')return alert('Chỉ Owner được chỉnh giao diện website.');const m=$('#siteSettingsMsg');m.textContent='Đang lưu…';m.className='form-msg';try{let s={...(currentSettings||fallbackSettings),hero_title:$('#sHeroTitle').value.trim(),hero_subtitle:$('#sHeroSubtitle').value.trim(),rules_text:$('#sRules').value.trim(),tiktok_url:$('#sTikTok').value.trim(),youtube_url:$('#sYouTube').value.trim(),facebook_url:$('#sFacebook').value.trim(),zalo_url:$('#sZalo').value.trim()};const files=[['sLogoFile','logo_url','site/logo'],['sHeroFile','hero_image_url','site/hero'],['sBackgroundFile','background_image_url','site/background']];for(const [input,key,path] of files){const f=$(`#${input}`).files[0];if(f){if(s[key])await removeMediaUrl(s[key]);s[key]=await uploadMedia(f,`${path}-${Date.now()}`);}}const {error}=await supabase.from('site_settings').upsert({id:1,...s,updated_at:new Date().toISOString()});if(error)throw error;m.className='form-msg ok';m.textContent='Đã cập nhật website.';currentSettings=s;applySettings(s);ev.target.querySelectorAll('input[type=file]').forEach(x=>x.value='');}catch(err){m.className='form-msg err';m.textContent=err.message||String(err);}});
 
 await recoverMobileAuthSession();
-await Promise.all([loadSiteSettings(),loadEvents()]);
+await Promise.all([loadSiteSettings(),loadEvents(),loadTeamVideos()]);
