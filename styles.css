@@ -35,3 +35,49 @@
 @media(max-width:640px){
   #ownerPasswordSection .form-grid{grid-template-columns:1fr}
 }
+
+.registered-court-info{
+  margin-top:16px;padding:16px;border-radius:18px;border:1px solid #b8dfc8;
+  background:linear-gradient(180deg,#f3fff7,#f7fbff);box-shadow:0 10px 28px rgba(4,83,50,.08)
+}
+.registered-success-head{font-size:12px;font-weight:900;letter-spacing:.12em;color:#079447;margin-bottom:4px}
+.registered-court-info h3{margin:0 0 12px;color:#082b4d}
+.registered-detail{display:grid;grid-template-columns:92px 1fr;gap:10px;padding:8px 0;border-bottom:1px dashed #dbe8e2}
+.registered-detail span{color:#60768b}.registered-detail b{color:#0c2740}
+.court-secret{margin-top:14px;padding:16px;border-radius:15px;background:#062f55;color:#fff;text-align:center}
+.court-secret span{display:block;font-size:11px;letter-spacing:.18em;font-weight:800;opacity:.78}
+.court-secret strong{display:block;margin-top:4px;font-size:26px;line-height:1.1}
+.registered-court-info>small{display:block;margin-top:10px;color:#63788d}
+@media(max-width:640px){
+  .registered-detail{grid-template-columns:78px 1fr}
+  .court-secret strong{font-size:24px}
+}
+
+.top-social-links{display:flex;align-items:center;gap:8px;margin-left:auto}
+.top-social{display:inline-flex;align-items:center;gap:6px;padding:8px 11px;border-radius:999px;
+  text-decoration:none;font-size:13px;font-weight:800;line-height:1;border:1px solid #d8e6f2;background:#fff}
+.top-social.tiktok{color:#111827}
+.top-social.youtube{color:#d71920}
+.top-social:hover{transform:translateY(-1px)}
+@media(max-width:640px){
+  .top-social-links{gap:5px}
+  .top-social{padding:7px 9px;font-size:12px}
+}
+
+.registration-lookup-section{padding-top:28px}
+.lookup-card{max-width:760px;margin:0 auto;padding:18px;border:1px solid #dbe7f1;border-radius:20px;background:#fff;box-shadow:0 12px 32px rgba(4,45,79,.07)}
+.lookup-form{display:grid;grid-template-columns:1fr auto;gap:10px}
+.lookup-form input{min-width:0}
+.lookup-results{display:grid;gap:14px;margin-top:14px}
+.lookup-result-card{padding:16px;border-radius:18px;background:#f8fbfe;border:1px solid #dce8f2}
+.lookup-status{font-size:11px;font-weight:900;letter-spacing:.12em;color:#079447}
+.lookup-result-card h3{margin:5px 0 12px;color:#092e50}
+.lookup-row{display:grid;grid-template-columns:130px 1fr;gap:10px;padding:7px 0;border-bottom:1px dashed #dbe6ee}
+.lookup-row span{color:#60778b}.lookup-row b{color:#102b42}
+.lookup-court-number{margin-top:14px;padding:16px;border-radius:15px;background:#062f55;color:#fff;text-align:center}
+.lookup-court-number span{display:block;font-size:11px;letter-spacing:.18em;font-weight:900;opacity:.8}
+.lookup-court-number strong{display:block;margin-top:3px;font-size:28px}
+@media(max-width:640px){
+  .lookup-form{grid-template-columns:1fr}
+  .lookup-row{grid-template-columns:105px 1fr}
+}

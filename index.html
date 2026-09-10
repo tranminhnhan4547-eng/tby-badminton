@@ -16,7 +16,17 @@
     <a class="brand" href="#top" aria-label="TBY">
       <img id="headerLogo" src="./assets/logo.png" alt="TBY" />
     </a>
-    <nav>
+    
+      <div class="top-social-links" aria-label="Mạng xã hội TBY">
+        <a id="topTikTokLink" class="top-social tiktok" href="#" target="_blank" rel="noopener" hidden>
+          <span>♪</span> TikTok
+        </a>
+        <a id="topYoutubeLink" class="top-social youtube" href="#" target="_blank" rel="noopener" hidden>
+          <span>▶</span> YouTube
+        </a>
+      </div>
+
+      <nav>
       <a href="#keo">Lịch kèo</a>
       <a href="#video">Video</a>
       <a href="#noiquy">Nội quy</a>
@@ -77,11 +87,25 @@
       <div class="form-grid">
         <label class="full">Họ và tên *<input id="fullName" required maxlength="50" placeholder="Nguyễn Văn A" /></label>
         <label>Giới tính *<select id="gender" required><option value="male">Nam</option><option value="female">Nữ</option></select></label>
-        <label>Trình độ *<select id="level" required><option>Yếu</option><option>Yếu+</option><option>TB-</option><option>TB</option><option>TB+</option><option>Khá</option></select></label>
+        <label>Trình độ *<select id="level" required><option>Yếu</option>
+              <option>Yếu+</option>
+              <option>TBY</option>
+              <option>TB-</option>
+              <option>TB</option>
+              <option>TB+</option>
+              <option>Khá</option></select></label>
         <label class="full">Số điện thoại / Zalo *<input id="phone" required maxlength="30" placeholder="09xx xxx xxx" /></label>
         <label class="full">Ghi chú<textarea id="note" rows="3" maxlength="200" placeholder="VD: đi cùng bạn, muốn đánh cặp…"></textarea></label>
       </div>
       <p id="registerMsg" class="form-msg"></p>
+
+        <div id="registeredCourtInfo" class="registered-court-info" hidden>
+          <div class="registered-success-head">✅ ĐĂNG KÝ THÀNH CÔNG</div>
+          <h3>Thông tin sân của bạn</h3>
+          <div id="registeredCourtInfoBody"></div>
+          <small>Hãy lưu lại thông tin này để đến đúng sân.</small>
+        </div>
+
       <button id="submitRegister" class="btn btn-primary full-btn" type="submit">🏸 Đăng ký slot</button>
     </form>
   </dialog>
@@ -134,7 +158,9 @@
           <form id="eventForm" class="form-grid admin-form">
             <input id="editingEventId" type="hidden" />
             <label class="full">Tên kèo *<input id="eTitle" required placeholder="Kèo tối nay"/></label>
-            <label class="full">Sân / địa điểm *<input id="eVenue" required placeholder="Sân Victory · Thủ Đức"/></label>
+            <label class="full">Tên sân *<input id="eVenue" required placeholder="Dragon Prime Gym & Badminton"/></label>
+            <label class="full">Địa chỉ sân *<input id="eVenueAddress" required placeholder="7 Einstein, Thủ Đức"/></label>
+            <label class="full">Sân số mấy?<input id="eCourtNumber" placeholder="Ví dụ: Sân 3"/><small>Thông tin này chỉ hiện cho khách sau khi đăng ký thành công.</small></label>
             <label>Ngày *<input id="eDate" type="date" required/></label>
             <label>Giờ bắt đầu *<input id="eStart" type="time" required/></label>
             <label>Giờ kết thúc *<input id="eEnd" type="time" required/></label>
@@ -198,6 +224,25 @@
             <div id="ownerPasswordMsg" class="form-msg full"></div>
           </form>
         </section>
+
+
+  <section class="section registration-lookup-section" id="tra-cuu-dang-ky">
+    <div class="section-head">
+      <div>
+        <div class="eyebrow">TRA CỨU ĐĂNG KÝ</div>
+        <h2>Xem lại thông tin sân</h2>
+        <p>Nhập đúng tên hoặc SĐT/Zalo đã dùng khi đăng ký.</p>
+      </div>
+    </div>
+    <div class="lookup-card">
+      <div class="lookup-form">
+        <input id="registrationLookupInput" type="text" autocomplete="off" placeholder="Tên đăng ký hoặc SĐT/Zalo"/>
+        <button id="registrationLookupBtn" class="btn btn-primary" type="button">🔎 Tra cứu</button>
+      </div>
+      <div id="registrationLookupMsg" class="form-msg"></div>
+      <div id="registrationLookupResults" class="lookup-results"></div>
+    </div>
+  </section>
 
 <section id="videoAdminSection" class="admin-manage-section" hidden>
           <div class="admin-manage-head"><div><span class="kicker">OWNER</span><h3>Quản lý Video TBY</h3></div><button id="videoAdminRefreshBtn" class="btn btn-ghost btn-sm" type="button">↻ Cập nhật</button></div>

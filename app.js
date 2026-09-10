@@ -91,14 +91,36 @@ async function openRegister(id){
   const {data,error}=await supabase.from('events_public').select('*').eq('id',id).single();
   if(error)return alert(error.message); if(data.is_cancelled)return alert('Kèo này đã được hủy.');
   $('#eventId').value=id;$('#registerTitle').textContent=data.title;
-  $('#eventSummary').innerHTML=`📍 <b>${esc(data.venue)}</b><br>📅 ${esc(fmtDate(data.event_date))}<br>🕒 ${esc(data.start_time.slice(0,5))} – ${esc(data.end_time.slice(0,5))}<br>🏸 ${esc(data.level_range)}`;
-  $('#registerMsg').textContent='';$('#registerDialog').showModal();
+  const addr=data.venue_address?`<br>📌 ${esc(data.venue_address)}`:'';
+  $('#eventSummary').innerHTML=`📍 <b>${esc(data.venue)}</b>${addr}<br>📅 ${esc(fmtDate(data.event_date))}<br>🕒 ${esc(data.start_time.slice(0,5))} – ${esc(data.end_time.slice(0,5))}<br>🏸 ${esc(data.level_range)}`;
+  $('#registerMsg').textContent='';
+  const info=$('#registeredCourtInfo');if(info)info.hidden=true;
+  $('#registerDialog').showModal();
 }
 $('#registerForm').addEventListener('submit',async ev=>{
   ev.preventDefault();const btn=$('#submitRegister');btn.disabled=true;btn.textContent='Đang đăng ký…';
   const payload={event_id:$('#eventId').value,full_name:$('#fullName').value.trim(),gender:$('#gender').value,level:$('#level').value,phone:$('#phone').value.trim(),note:$('#note').value.trim()};
-  const {error}=await supabase.rpc('register_player',payload);const msg=$('#registerMsg');
-  if(error){msg.className='form-msg err';msg.textContent=error.message;}else{msg.className='form-msg ok';msg.textContent='Đăng ký thành công!';ev.target.reset();setTimeout(()=>$('#registerDialog').close(),900);await loadEvents();}
+  const {data,error}=await supabase.rpc('register_player',payload);const msg=$('#registerMsg');
+  if(error){
+    msg.className='form-msg err';msg.textContent=error.message;
+  }else{
+    msg.className='form-msg ok';msg.textContent='Đăng ký thành công!';
+    ev.target.reset();
+    const d=(data&&typeof data==='object')?data:{};
+    const court=d.court_number?`<div class="court-secret"><span>SÂN SỐ</span><strong>${esc(d.court_number)}</strong></div>`:'<div class="court-secret"><span>SÂN SỐ</span><strong>Liên hệ quản lý</strong></div>';
+    const info=$('#registeredCourtInfo'),body=$('#registeredCourtInfoBody');
+    if(info&&body){
+      body.innerHTML=`
+        <div class="registered-detail"><span>🏸 Sân</span><b>${esc(d.venue||'')}</b></div>
+        <div class="registered-detail"><span>📍 Địa chỉ</span><b>${esc(d.venue_address||'')}</b></div>
+        <div class="registered-detail"><span>📅 Ngày</span><b>${esc(d.event_date?fmtDate(d.event_date):'')}</b></div>
+        <div class="registered-detail"><span>🕒 Giờ</span><b>${esc((d.start_time||'').slice(0,5))} – ${esc((d.end_time||'').slice(0,5))}</b></div>
+        ${court}`;
+      info.hidden=false;
+      info.scrollIntoView({behavior:'smooth',block:'nearest'});
+    }
+    await loadEvents();
+  }
   btn.disabled=false;btn.textContent='🏸 Đăng ký slot';
 });
 
@@ -258,7 +280,7 @@ async function recoverMobileAuthSession(){
 }
 
 function resetEventForm(){
-  $('#eventForm').reset();$('#editingEventId').value='';$('#eLevel').value='Yếu+ → TB-';$('#eTotal').value=10;$('#eMaleFee').value=65;$('#eFemaleFee').value=55;$('#eOpen').checked=true;$('#eventFormHeading').textContent='Tạo kèo mới';$('#saveEventBtn').textContent='Tạo kèo';$('#cancelEditBtn').hidden=true;$('#eventImagePreview').hidden=true;$('#removeEventImageBtn').hidden=true;$('#eImageFile').value='';pendingRemoveEventImage=false;$('#eOpen').disabled=currentAdminRole!=='owner';
+  $('#eventForm').reset();$('#editingEventId').value='';$('#eVenueAddress').value='';$('#eCourtNumber').value='';$('#eLevel').value='Yếu+ → TB-';$('#eTotal').value=10;$('#eMaleFee').value=65;$('#eFemaleFee').value=55;$('#eOpen').checked=true;$('#eventFormHeading').textContent='Tạo kèo mới';$('#saveEventBtn').textContent='Tạo kèo';$('#cancelEditBtn').hidden=true;$('#eventImagePreview').hidden=true;$('#removeEventImageBtn').hidden=true;$('#eImageFile').value='';pendingRemoveEventImage=false;$('#eOpen').disabled=currentAdminRole!=='owner';
 }
 $('#cancelEditBtn').addEventListener('click',resetEventForm);
 $('#eImageFile').addEventListener('change',()=>{const f=$('#eImageFile').files[0];if(!f)return;$('#eventImagePreview').src=URL.createObjectURL(f);$('#eventImagePreview').hidden=false;$('#removeEventImageBtn').hidden=false;pendingRemoveEventImage=false;});
@@ -275,11 +297,13 @@ async function removeMediaUrl(url){const p=storagePathFromUrl(url);if(p)await su
 $('#eventForm').addEventListener('submit',async ev=>{
   ev.preventDefault();if(!currentAdminUser||!['owner','admin'].includes(currentAdminRole))return alert('Chỉ Owner/Admin mới được chỉnh kèo.');
   const id=$('#editingEventId').value||null;const old=id?currentAdminEvents.find(x=>x.id===id):null;
-  const totalSlots=Math.max(1,+$('#eTotal').value||1);const p={title:$('#eTitle').value.trim(),venue:$('#eVenue').value.trim(),event_date:$('#eDate').value,start_time:$('#eStart').value,end_time:$('#eEnd').value,level_range:$('#eLevel').value.trim(),total_slots:totalSlots,male_fee:+$('#eMaleFee').value||0,female_fee:+$('#eFemaleFee').value||0};if(currentAdminRole==='owner')p.is_open=$('#eOpen').checked;
+  const totalSlots=Math.max(1,+$('#eTotal').value||1);const p={title:$('#eTitle').value.trim(),venue:$('#eVenue').value.trim(),venue_address:$('#eVenueAddress').value.trim(),event_date:$('#eDate').value,start_time:$('#eStart').value,end_time:$('#eEnd').value,level_range:$('#eLevel').value.trim(),total_slots:totalSlots,male_fee:+$('#eMaleFee').value||0,female_fee:+$('#eFemaleFee').value||0};if(currentAdminRole==='owner')p.is_open=$('#eOpen').checked;
   const m=$('#adminMsg');m.textContent='Đang lưu…';m.className='form-msg';
   try{
     let eventId=id;
     if(id){const {error}=await supabase.from('events').update(p).eq('id',id);if(error)throw error;}else{const createPayload={...p,is_cancelled:false,is_open:currentAdminRole==='owner'?$('#eOpen').checked:true};const {data,error}=await supabase.from('events').insert(createPayload).select('id').single();if(error)throw error;eventId=data.id;}
+    const {error:courtErr}=await supabase.rpc('admin_set_event_court',{p_event_id:eventId,p_court_number:$('#eCourtNumber').value.trim()||null});
+    if(courtErr)throw courtErr;
     if(pendingRemoveEventImage&&old?.image_url){await removeMediaUrl(old.image_url);const {error}=await supabase.from('events').update({image_url:null}).eq('id',eventId);if(error)throw error;}
     const file=$('#eImageFile').files[0];if(file){if(old?.image_url)await removeMediaUrl(old.image_url);const url=await uploadMedia(file,`events/${eventId}-${Date.now()}`);const {error}=await supabase.from('events').update({image_url:url}).eq('id',eventId);if(error)throw error;}
     m.className='form-msg ok';m.textContent=id?'Đã cập nhật kèo.':'Tạo kèo thành công.';resetEventForm();await Promise.all([loadEvents(),loadAdminEvents()]);
@@ -308,8 +332,11 @@ function adminEventCard(e){
 function editEvent(id){
   if(!['owner','admin'].includes(currentAdminRole))return;
   const e=currentAdminEvents.find(x=>x.id===id);if(!e)return;
-  $('#editingEventId').value=e.id;$('#eTitle').value=e.title;$('#eVenue').value=e.venue;$('#eDate').value=e.event_date;$('#eStart').value=e.start_time.slice(0,5);$('#eEnd').value=e.end_time.slice(0,5);$('#eLevel').value=e.level_range;$('#eTotal').value=e.total_slots||10;$('#eMaleFee').value=e.male_fee||0;$('#eFemaleFee').value=e.female_fee||0;$('#eOpen').checked=!!e.is_open;$('#eOpen').disabled=currentAdminRole!=='owner';$('#eImageFile').value='';pendingRemoveEventImage=false;$('#eventFormHeading').textContent='Sửa kèo';$('#saveEventBtn').textContent='Lưu thay đổi';$('#cancelEditBtn').hidden=false;
+  $('#editingEventId').value=e.id;$('#eTitle').value=e.title;$('#eVenue').value=e.venue;$('#eVenueAddress').value=e.venue_address||'';$('#eCourtNumber').value='';$('#eDate').value=e.event_date;$('#eStart').value=e.start_time.slice(0,5);$('#eEnd').value=e.end_time.slice(0,5);$('#eLevel').value=e.level_range;$('#eTotal').value=e.total_slots||10;$('#eMaleFee').value=e.male_fee||0;$('#eFemaleFee').value=e.female_fee||0;$('#eOpen').checked=!!e.is_open;$('#eOpen').disabled=currentAdminRole!=='owner';$('#eImageFile').value='';pendingRemoveEventImage=false;$('#eventFormHeading').textContent='Sửa kèo';$('#saveEventBtn').textContent='Lưu thay đổi';$('#cancelEditBtn').hidden=false;
   if(e.image_url){$('#eventImagePreview').src=e.image_url;$('#eventImagePreview').hidden=false;$('#removeEventImageBtn').hidden=false;}else{$('#eventImagePreview').hidden=true;$('#removeEventImageBtn').hidden=true;}
+  supabase.rpc('admin_get_event_court',{p_event_id:e.id}).then(({data,error})=>{
+    if(!error&&data!==null&&data!==undefined)$('#eCourtNumber').value=typeof data==='string'?data:(data.court_number||'');
+  });
   $('#eventEditorSection').scrollIntoView({behavior:'smooth',block:'start'});
 }
 async function toggleRegistration(id,isOpen){
@@ -600,4 +627,63 @@ document.getElementById('ownerPasswordForm')?.addEventListener('submit',async ev
   m.className='form-msg ok';
   m.textContent='Đã đặt mật khẩu mới. Từ giờ bạn có thể đăng nhập bằng email + mật khẩu trên điện thoại và PC.';
 });
+
+
+
+function syncTopSocialLinks(){
+  const pairs=[
+    ['tiktokLink','topTikTokLink'],
+    ['youtubeLink','topYoutubeLink']
+  ];
+  pairs.forEach(([sourceId,targetId])=>{
+    const source=document.getElementById(sourceId);
+    const target=document.getElementById(targetId);
+    if(!target)return;
+    const href=source?.getAttribute('href')||'';
+    if(href && href!=='#'){
+      target.href=href;
+      target.hidden=false;
+    }else{
+      target.hidden=true;
+    }
+  });
+}
+
+
+window.addEventListener('DOMContentLoaded',()=>{
+  syncTopSocialLinks();
+  const socialObserver=new MutationObserver(syncTopSocialLinks);
+  socialObserver.observe(document.body,{subtree:true,attributes:true,attributeFilter:['href']});
+});
+
+
+function lookupResultCard(x){
+  const court=x.court_number
+    ? `<div class="lookup-court-number"><span>SÂN SỐ</span><strong>${esc(x.court_number)}</strong></div>`
+    : `<div class="lookup-court-number"><span>SÂN SỐ</span><strong>Liên hệ quản lý</strong></div>`;
+  return `<article class="lookup-result-card">
+    <div class="lookup-status">✅ ĐÃ ĐĂNG KÝ</div>
+    <h3>${esc(x.title||'Kèo TBY')}</h3>
+    <div class="lookup-row"><span>👤 Người đăng ký</span><b>${esc(x.full_name||'')}</b></div>
+    <div class="lookup-row"><span>🏸 Sân</span><b>${esc(x.venue||'')}</b></div>
+    <div class="lookup-row"><span>📍 Địa chỉ</span><b>${esc(x.venue_address||'')}</b></div>
+    <div class="lookup-row"><span>📅 Ngày</span><b>${esc(x.event_date?fmtDate(x.event_date):'')}</b></div>
+    <div class="lookup-row"><span>🕒 Giờ</span><b>${esc((x.start_time||'').slice(0,5))} – ${esc((x.end_time||'').slice(0,5))}</b></div>
+    ${court}
+  </article>`;
+}
+async function lookupRegistration(){
+  const q=$('#registrationLookupInput')?.value.trim()||'';
+  const msg=$('#registrationLookupMsg'),root=$('#registrationLookupResults');
+  if(!q){msg.className='form-msg err';msg.textContent='Nhập tên đăng ký hoặc SĐT/Zalo.';root.innerHTML='';return;}
+  msg.className='form-msg';msg.textContent='Đang tra cứu…';root.innerHTML='';
+  const {data,error}=await supabase.rpc('lookup_registration_court',{p_query:q});
+  if(error){msg.className='form-msg err';msg.textContent=error.message;return;}
+  const rows=Array.isArray(data)?data:(data?[data]:[]);
+  if(!rows.length){msg.className='form-msg err';msg.textContent='Không tìm thấy đăng ký phù hợp.';return;}
+  msg.className='form-msg ok';msg.textContent=`Tìm thấy ${rows.length} đăng ký.`;
+  root.innerHTML=rows.map(lookupResultCard).join('');
+}
+$('#registrationLookupBtn')?.addEventListener('click',lookupRegistration);
+$('#registrationLookupInput')?.addEventListener('keydown',e=>{if(e.key==='Enter')lookupRegistration();});
 
