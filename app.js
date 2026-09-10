@@ -47,7 +47,7 @@ function applySettings(s){
   const rules=(s.rules_text||fallbackSettings.rules_text).split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
   $('#rulesList').innerHTML=(rules.length?rules:['Nội quy đang được cập nhật.']).map((r,i)=>`<article><b>${String(i+1).padStart(2,'0')}</b><p>${esc(r)}</p></article>`).join('');
   const links=[['TikTok',s.tiktok_url,'tiktok'],['YouTube',s.youtube_url,'youtube'],['Facebook',s.facebook_url,'facebook'],['Zalo',s.zalo_url,'zalo']].filter(x=>x[1]);
-  $('#socialLinks').innerHTML=links.length?links.map(([name,url,key])=>`<a data-social="${key}" href="${esc(url)}" target="_blank" rel="noopener noreferrer">${name}</a>`).join(''):'<span class="muted">Các kênh mạng xã hội đang cập nhật.</span>';syncTopSocialLinks();
+  $('#socialLinks').innerHTML=links.length?links.map(([name,url,key])=>`<a data-social="${key}" href="${esc(url)}" target="_blank" rel="noopener noreferrer">${name}</a>`).join(''):'<span class="muted">Các kênh mạng xã hội đang cập nhật.</span>';
 }
 
 async function loadEvents(){
@@ -638,42 +638,10 @@ document.getElementById('ownerPasswordForm')?.addEventListener('submit',async ev
 
 
 
-function syncTopSocialLinks(){
-  const pairs=[
-    ['#topTikTokLink','#socialLinks a[data-social="tiktok"]'],
-    ['#topYoutubeLink','#socialLinks a[data-social="youtube"]']
-  ];
-  pairs.forEach(([topSel,bottomSel])=>{
-    const top=$(topSel);
-    if(!top)return;
-
-    // Ưu tiên lấy trực tiếp link đang dùng ở footer.
-    let bottom=document.querySelector(bottomSel);
-
-    // Fallback: tìm theo nội dung chữ nếu footer cũ chưa có data-social.
-    if(!bottom){
-      const all=[...document.querySelectorAll('#socialLinks a')];
-      bottom=all.find(a=>{
-        const t=(a.textContent||'').toLowerCase();
-        return topSel.includes('TikTok') ? t.includes('tiktok') : t.includes('youtube');
-      });
-    }
-
-    const href=(bottom?.getAttribute('href')||'').trim();
-    if(href && href!=='#'){
-      top.href=href;
-      top.hidden=false;
-      top.target='_blank';
-      top.rel='noopener noreferrer';
-    }else{
-      top.removeAttribute('href');
-      top.hidden=true;
-    }
-  });
-}
 
 
-window.addEventListener('DOMContentLoaded',syncTopSocialLinks);
+
+
 
 
 function lookupResultCard(x){
