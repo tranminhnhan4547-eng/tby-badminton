@@ -47,7 +47,7 @@ function applySettings(s){
   const rules=(s.rules_text||fallbackSettings.rules_text).split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
   $('#rulesList').innerHTML=(rules.length?rules:['Nội quy đang được cập nhật.']).map((r,i)=>`<article><b>${String(i+1).padStart(2,'0')}</b><p>${esc(r)}</p></article>`).join('');
   const links=[['TikTok',s.tiktok_url],['YouTube',s.youtube_url],['Facebook',s.facebook_url],['Zalo',s.zalo_url]].filter(x=>x[1]);
-  $('#socialLinks').innerHTML=links.length?links.map(([name,url])=>`<a href="${esc(url)}" target="_blank" rel="noopener noreferrer">${name}</a>`).join(''):'<span class="muted">Các kênh mạng xã hội đang cập nhật.</span>';
+  $('#socialLinks').innerHTML=links.length?links.map(([name,url])=>`<a href="${esc(url)}" target="_blank" rel="noopener noreferrer">${name}</a>`).join(''):'<span class="muted">Các kênh mạng xã hội đang cập nhật.</span>';syncTopSocialLinks();
 }
 
 async function loadEvents(){
@@ -639,27 +639,22 @@ document.getElementById('ownerPasswordForm')?.addEventListener('submit',async ev
 
 
 function syncTopSocialLinks(){
-  const topTikTok=$('#topTikTokLink');
-  const topYoutube=$('#topYoutubeLink');
-
-  // Dùng chính URL đang hiển thị ở cuối trang.
-  const bottomTikTok=$('#tiktokLink');
-  const bottomYoutube=$('#youtubeLink');
-
-  const setTop=(top,bottom)=>{
-    if(!top)return;
-    const href=(bottom?.getAttribute('href')||'').trim();
-    if(href && href!=='#'){
-      top.href=href;
-      top.hidden=false;
+  const s=currentSettings||fallbackSettings;
+  const links=[
+    ['#topTikTokLink',s.tiktok_url],
+    ['#topYoutubeLink',s.youtube_url]
+  ];
+  links.forEach(([selector,url])=>{
+    const a=$(selector);
+    if(!a)return;
+    if(url){
+      a.href=url;
+      a.hidden=false;
     }else{
-      top.removeAttribute('href');
-      top.hidden=true;
+      a.removeAttribute('href');
+      a.hidden=true;
     }
-  };
-
-  setTop(topTikTok,bottomTikTok);
-  setTop(topYoutube,bottomYoutube);
+  });
 }
 
 

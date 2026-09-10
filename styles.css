@@ -113,19 +113,10 @@
   .success-actions{grid-template-columns:1fr}
 }
 
-/* Public registration lookup */
-.public-lookup-nav{
-  display:inline-flex;align-items:center;justify-content:center;
-  text-decoration:none;font-weight:800;white-space:nowrap
-}
-#tra-cuu-dang-ky{display:block!important;visibility:visible!important}
-#tra-cuu-dang-ky .lookup-card{display:block!important}
-@media(max-width:640px){
-  .public-lookup-nav{font-size:12px}
-}
 
-/* Recovery: keep public lookup visible and header responsive */
-#tra-cuu-dang-ky{display:block!important;visibility:visible!important}
+/* TBY restore: public lookup + responsive header */
+#tra-cuu-dang-ky{display:block;visibility:visible}
+.lookup-card{max-width:760px;margin:0 auto}
 .topbar nav{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
 @media(max-width:760px){
   .topbar{flex-wrap:wrap}
