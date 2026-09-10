@@ -47,14 +47,29 @@ function applySettings(s){
   const rules=(s.rules_text||fallbackSettings.rules_text).split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
   $('#rulesList').innerHTML=(rules.length?rules:['Nội quy đang được cập nhật.']).map((r,i)=>`<article><b>${String(i+1).padStart(2,'0')}</b><p>${esc(r)}</p></article>`).join('');
   const links=[['TikTok',s.tiktok_url],['YouTube',s.youtube_url],['Facebook',s.facebook_url],['Zalo',s.zalo_url]].filter(x=>x[1]);
-  $('#socialLinks').innerHTML=links.length?links.map(([name,url])=>`<a href="${esc(url)}" target="_blank" rel="noopener noreferrer">${name}</a>`).join(''):'<span class="muted">Các kênh mạng xã hội đang cập nhật.</span>';
+  $('#socialLinks').innerHTML=links.length?links.map(([name,url])=>`<a href="${esc(url)}" target="_blank" rel="noopener noreferrer">${name}</a>`).join(''):'<span class="muted">Các kênh mạng xã hội đang cập nhật.</span>';syncTopSocialLinks();
 }
 
 async function loadEvents(){
   const root=$('#events');
+  if(!root)return;
   if(!supabase){root.innerHTML='<div class="empty-card">Chưa cấu hình Supabase.</div>';return;}
   root.innerHTML='<div class="empty-card">Đang tải lịch kèo…</div>';
-  const {data,error}=await supabase.from('events_public').select('*').gte('event_date',today()).order('event_date').order('start_time');
+
+  let {data,error}=await supabase.from('events_public')
+    .select('*').gte('event_date',today()).order('event_date').order('start_time');
+
+  // Fallback cứu trang: nếu view events_public lỗi, vẫn đọc bảng events
+  // để các kèo cũ không biến mất khỏi giao diện.
+  if(error){
+    const fallback=await supabase.from('events')
+      .select('*').gte('event_date',today()).order('event_date').order('start_time');
+    if(!fallback.error){
+      data=(fallback.data||[]).map(e=>({...e,total_count:0,male_count:0,female_count:0,players:[]}));
+      error=null;
+    }
+  }
+
   if(error){root.innerHTML=`<div class="empty-card">Lỗi tải dữ liệu: ${esc(error.message)}</div>`;return;}
   if(!data?.length){root.innerHTML='<div class="empty-card">Hiện chưa có kèo mới.</div>';return;}
   root.innerHTML=data.map(eventCard).join('');
@@ -594,8 +609,11 @@ async function deleteTeamVideo(id,url,type='upload'){
 async function populateSettingsForm(){await loadSiteSettings();const s=currentSettings||fallbackSettings;$('#sHeroTitle').value=s.hero_title||'';$('#sHeroSubtitle').value=s.hero_subtitle||'';$('#sRules').value=s.rules_text||'';$('#sTikTok').value=s.tiktok_url||'';$('#sYouTube').value=s.youtube_url||'';$('#sFacebook').value=s.facebook_url||'';$('#sZalo').value=s.zalo_url||'';}
 $('#siteSettingsForm').addEventListener('submit',async ev=>{ev.preventDefault();if(currentAdminRole!=='owner')return alert('Chỉ Owner được chỉnh giao diện website.');const m=$('#siteSettingsMsg');m.textContent='Đang lưu…';m.className='form-msg';try{let s={...(currentSettings||fallbackSettings),hero_title:$('#sHeroTitle').value.trim(),hero_subtitle:$('#sHeroSubtitle').value.trim(),rules_text:$('#sRules').value.trim(),tiktok_url:$('#sTikTok').value.trim(),youtube_url:$('#sYouTube').value.trim(),facebook_url:$('#sFacebook').value.trim(),zalo_url:$('#sZalo').value.trim()};const files=[['sLogoFile','logo_url','site/logo'],['sHeroFile','hero_image_url','site/hero'],['sBackgroundFile','background_image_url','site/background']];for(const [input,key,path] of files){const f=$(`#${input}`).files[0];if(f){if(s[key])await removeMediaUrl(s[key]);s[key]=await uploadMedia(f,`${path}-${Date.now()}`);}}const {error}=await supabase.from('site_settings').upsert({id:1,...s,updated_at:new Date().toISOString()});if(error)throw error;m.className='form-msg ok';m.textContent='Đã cập nhật website.';currentSettings=s;applySettings(s);ev.target.querySelectorAll('input[type=file]').forEach(x=>x.value='');}catch(err){m.className='form-msg err';m.textContent=err.message||String(err);}});
 
-await recoverMobileAuthSession();
-await Promise.all([loadSiteSettings(),loadEvents(),loadTeamVideos()]);
+async function startTBY(){
+  try{await recoverMobileAuthSession();}catch(e){console.error(e);}
+  await Promise.allSettled([loadSiteSettings(),loadEvents(),loadTeamVideos()]);
+}
+startTBY();
 
 
 document.getElementById('ownerPasswordForm')?.addEventListener('submit',async ev=>{
@@ -639,27 +657,16 @@ document.getElementById('ownerPasswordForm')?.addEventListener('submit',async ev
 
 
 function syncTopSocialLinks(){
-  const topTikTok=$('#topTikTokLink');
-  const topYoutube=$('#topYoutubeLink');
-
-  // Dùng chính URL đang hiển thị ở cuối trang.
-  const bottomTikTok=$('#tiktokLink');
-  const bottomYoutube=$('#youtubeLink');
-
-  const setTop=(top,bottom)=>{
-    if(!top)return;
-    const href=(bottom?.getAttribute('href')||'').trim();
-    if(href && href!=='#'){
-      top.href=href;
-      top.hidden=false;
-    }else{
-      top.removeAttribute('href');
-      top.hidden=true;
-    }
-  };
-
-  setTop(topTikTok,bottomTikTok);
-  setTop(topYoutube,bottomYoutube);
+  const s=currentSettings||fallbackSettings;
+  const pairs=[
+    ['#topTikTokLink',s.tiktok_url],
+    ['#topYoutubeLink',s.youtube_url]
+  ];
+  pairs.forEach(([sel,url])=>{
+    const a=$(sel); if(!a)return;
+    if(url){a.href=url;a.hidden=false;}
+    else{a.removeAttribute('href');a.hidden=true;}
+  });
 }
 
 
