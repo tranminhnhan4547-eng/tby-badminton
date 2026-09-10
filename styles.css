@@ -195,3 +195,200 @@
     font-size:11px!important;
   }
 }
+
+
+/* TBY social banner - desktop and mobile */
+.top-contact-section{
+  padding-top:14px!important;
+  padding-bottom:8px!important;
+}
+.tby-social-banner{
+  position:relative;
+  min-height:132px;
+  padding:22px 28px;
+  border-radius:28px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:28px;
+  overflow:hidden;
+  border:1px solid rgba(180,211,235,.95);
+  background:
+    linear-gradient(135deg,rgba(247,252,255,.96),rgba(220,239,252,.94)),
+    radial-gradient(circle at 18% 20%,rgba(255,255,255,.9),transparent 38%);
+  box-shadow:
+    0 14px 34px rgba(14,67,105,.10),
+    inset 0 1px 0 rgba(255,255,255,.9);
+  backdrop-filter:blur(12px);
+}
+.tby-social-banner:before{
+  content:"";
+  position:absolute;
+  inset:0;
+  background:
+    linear-gradient(115deg,transparent 0 46%,rgba(255,255,255,.55) 50%,transparent 54%),
+    repeating-linear-gradient(90deg,rgba(20,100,160,.035) 0 1px,transparent 1px 46px);
+  pointer-events:none;
+}
+.tby-social-brand{
+  position:relative;
+  z-index:1;
+  min-width:250px;
+}
+.tby-watermark{
+  font-size:74px;
+  line-height:.82;
+  font-weight:900;
+  font-style:italic;
+  letter-spacing:-6px;
+  color:rgba(36,121,179,.11);
+  text-shadow:0 1px 0 rgba(255,255,255,.75);
+  user-select:none;
+}
+.tby-slogan{
+  margin-top:8px;
+  font-size:12px;
+  font-weight:900;
+  letter-spacing:.18em;
+  color:rgba(28,82,118,.42);
+}
+.tby-social-actions{
+  position:relative;
+  z-index:1;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:12px;
+}
+.tby-follow-title{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  white-space:nowrap;
+  font-size:14px;
+  font-weight:900;
+  letter-spacing:.16em;
+  color:#0b3554;
+}
+.tby-follow-title span{
+  width:72px;
+  height:1px;
+  background:rgba(14,74,115,.45);
+}
+.tby-social-buttons{
+  display:flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  flex-wrap:wrap!important;
+  gap:12px!important;
+}
+.tby-social-buttons a{
+  position:relative;
+  min-width:150px;
+  min-height:52px;
+  padding:0 44px 0 48px!important;
+  display:inline-flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  border-radius:14px!important;
+  border:1px solid rgba(150,190,220,.95)!important;
+  background:linear-gradient(180deg,#ffffff,#eef7fd)!important;
+  color:#0a2f4d!important;
+  font-size:16px!important;
+  font-weight:800!important;
+  text-decoration:none!important;
+  box-shadow:
+    0 8px 18px rgba(27,78,114,.13),
+    inset 0 1px 0 rgba(255,255,255,.95)!important;
+  transition:transform .16s ease, box-shadow .16s ease, border-color .16s ease;
+}
+.tby-social-buttons a:hover{
+  transform:translateY(-2px);
+  border-color:#85bde2!important;
+  box-shadow:0 12px 24px rgba(27,78,114,.17)!important;
+}
+.tby-social-buttons a:after{
+  content:"›";
+  position:absolute;
+  right:16px;
+  top:50%;
+  transform:translateY(-53%);
+  font-size:30px;
+  line-height:1;
+  font-weight:300;
+  color:#7b9bb3;
+}
+.tby-social-buttons a:before{
+  position:absolute;
+  left:14px;
+  top:50%;
+  transform:translateY(-50%);
+  width:26px;
+  height:26px;
+  display:grid;
+  place-items:center;
+  border-radius:7px;
+  font-size:15px;
+  font-weight:900;
+  color:#fff;
+}
+.tby-social-buttons a[data-social="tiktok"]:before{
+  content:"♪";
+  background:#0d1117;
+  text-shadow:-1px 0 #25f4ee,1px 0 #fe2c55;
+}
+.tby-social-buttons a[data-social="youtube"]:before{
+  content:"▶";
+  background:#ff0000;
+  border-radius:7px;
+  font-size:12px;
+}
+.tby-social-buttons a[data-social="facebook"]:before{
+  content:"f";
+  background:#1877f2;
+  font-family:Arial,sans-serif;
+}
+.tby-social-buttons a[data-social="zalo"]:before{
+  content:"Z";
+  background:#0a68ff;
+}
+@media(max-width:760px){
+  .tby-social-banner{
+    min-height:0;
+    padding:16px 14px;
+    border-radius:20px;
+    flex-direction:column;
+    gap:14px;
+  }
+  .tby-social-brand{
+    min-width:0;
+    width:100%;
+    text-align:center;
+  }
+  .tby-watermark{
+    font-size:50px;
+    letter-spacing:-4px;
+  }
+  .tby-slogan{
+    font-size:10px;
+  }
+  .tby-follow-title{
+    font-size:11px;
+    letter-spacing:.12em;
+    gap:8px;
+  }
+  .tby-follow-title span{width:34px}
+  .tby-social-buttons{
+    width:100%;
+    gap:8px!important;
+  }
+  .tby-social-buttons a{
+    min-width:0;
+    flex:1 1 calc(50% - 8px);
+    min-height:46px;
+    padding:0 34px 0 42px!important;
+    font-size:14px!important;
+  }
+  .tby-social-buttons a:before{left:11px;width:24px;height:24px}
+  .tby-social-buttons a:after{right:11px;font-size:25px}
+}
