@@ -664,7 +664,6 @@ function syncTopSocialLinks(){
 
 
 window.addEventListener('DOMContentLoaded',syncTopSocialLinks);
-});
 
 
 function lookupResultCard(x){
