@@ -240,7 +240,6 @@ supabase?.auth.onAuthStateChange(async(event)=>{
   if(event==='SIGNED_IN'){
     // Magic Link trên điện thoại: tự mở lại khu Admin sau khi session được nhận.
     await syncAuth();
-    if(!$('#adminDialog').open) $('#adminDialog').showModal();
   }else if(event==='SIGNED_OUT'){
     await syncAuth();
   }
@@ -259,7 +258,6 @@ async function recoverMobileAuthSession(){
       if(error)throw error;
       history.replaceState({},document.title,TBY_SITE_URL);
       await syncAuth();
-      if(!$('#adminDialog').open) $('#adminDialog').showModal();
       return;
     }
 
@@ -271,7 +269,6 @@ async function recoverMobileAuthSession(){
       if(!error){
         history.replaceState({},document.title,TBY_SITE_URL);
         await syncAuth();
-        if(!$('#adminDialog').open) $('#adminDialog').showModal();
         return;
       }
     }
@@ -685,5 +682,13 @@ $('#successLookupBtn')?.addEventListener('click',()=>{
   const d=$('#registrationSuccessDialog');
   if(d?.open)d.close();
   document.querySelector('#tra-cuu-dang-ky')?.scrollIntoView({behavior:'smooth',block:'start'});
+});
+
+
+
+// Admin chỉ mở khi người dùng bấm nút Admin.
+window.addEventListener('pageshow', () => {
+  const dlg = document.getElementById('adminDialog');
+  if (dlg?.open) dlg.close();
 });
 
