@@ -258,7 +258,7 @@ async function recoverMobileAuthSession(){
       if(error)throw error;
       history.replaceState({},document.title,TBY_SITE_URL);
       await syncAuth();
-      return;
+        return;
     }
 
     // Hỗ trợ callback dạng ?code= nếu Supabase/provider trả PKCE code.
@@ -269,7 +269,7 @@ async function recoverMobileAuthSession(){
       if(!error){
         history.replaceState({},document.title,TBY_SITE_URL);
         await syncAuth();
-        return;
+            return;
       }
     }
 
@@ -686,9 +686,11 @@ $('#successLookupBtn')?.addEventListener('click',()=>{
 
 
 
-// Admin chỉ mở khi người dùng bấm nút Admin.
-window.addEventListener('pageshow', () => {
-  const dlg = document.getElementById('adminDialog');
-  if (dlg?.open) dlg.close();
+// Admin chỉ được mở khi bấm nút Admin.
+window.addEventListener('pageshow',()=>{
+  const dlg=document.getElementById('adminDialog');
+  if(dlg?.open){
+    try{dlg.close();}catch(e){}
+  }
 });
 

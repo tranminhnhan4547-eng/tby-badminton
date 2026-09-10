@@ -392,3 +392,7 @@
   .tby-social-buttons a:before{left:11px;width:24px;height:24px}
   .tby-social-buttons a:after{right:11px;font-size:25px}
 }
+
+#adminDialog:not([open]){
+  display:none !important;
+}
