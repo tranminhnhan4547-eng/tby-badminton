@@ -639,29 +639,31 @@ document.getElementById('ownerPasswordForm')?.addEventListener('submit',async ev
 
 
 function syncTopSocialLinks(){
-  const pairs=[
-    ['tiktokLink','topTikTokLink'],
-    ['youtubeLink','topYoutubeLink']
-  ];
-  pairs.forEach(([sourceId,targetId])=>{
-    const source=document.getElementById(sourceId);
-    const target=document.getElementById(targetId);
-    if(!target)return;
-    const href=source?.getAttribute('href')||'';
+  const topTikTok=$('#topTikTokLink');
+  const topYoutube=$('#topYoutubeLink');
+
+  // Dùng chính URL đang hiển thị ở cuối trang.
+  const bottomTikTok=$('#tiktokLink');
+  const bottomYoutube=$('#youtubeLink');
+
+  const setTop=(top,bottom)=>{
+    if(!top)return;
+    const href=(bottom?.getAttribute('href')||'').trim();
     if(href && href!=='#'){
-      target.href=href;
-      target.hidden=false;
+      top.href=href;
+      top.hidden=false;
     }else{
-      target.hidden=true;
+      top.removeAttribute('href');
+      top.hidden=true;
     }
-  });
+  };
+
+  setTop(topTikTok,bottomTikTok);
+  setTop(topYoutube,bottomYoutube);
 }
 
 
-window.addEventListener('DOMContentLoaded',()=>{
-  syncTopSocialLinks();
-  const socialObserver=new MutationObserver(syncTopSocialLinks);
-  socialObserver.observe(document.body,{subtree:true,attributes:true,attributeFilter:['href']});
+window.addEventListener('DOMContentLoaded',syncTopSocialLinks);
 });
 
 
