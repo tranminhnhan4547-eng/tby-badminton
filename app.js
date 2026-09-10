@@ -46,8 +46,8 @@ function applySettings(s){
   document.body.style.backgroundImage=s.background_image_url?`linear-gradient(rgba(244,248,252,.93),rgba(244,248,252,.93)),url("${s.background_image_url}")`:'';
   const rules=(s.rules_text||fallbackSettings.rules_text).split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
   $('#rulesList').innerHTML=(rules.length?rules:['Nội quy đang được cập nhật.']).map((r,i)=>`<article><b>${String(i+1).padStart(2,'0')}</b><p>${esc(r)}</p></article>`).join('');
-  const links=[['TikTok',s.tiktok_url],['YouTube',s.youtube_url],['Facebook',s.facebook_url],['Zalo',s.zalo_url]].filter(x=>x[1]);
-  $('#socialLinks').innerHTML=links.length?links.map(([name,url])=>`<a href="${esc(url)}" target="_blank" rel="noopener noreferrer">${name}</a>`).join(''):'<span class="muted">Các kênh mạng xã hội đang cập nhật.</span>';
+  const links=[['TikTok',s.tiktok_url,'tiktok'],['YouTube',s.youtube_url,'youtube'],['Facebook',s.facebook_url,'facebook'],['Zalo',s.zalo_url,'zalo']].filter(x=>x[1]);
+  $('#socialLinks').innerHTML=links.length?links.map(([name,url,key])=>`<a data-social="${key}" href="${esc(url)}" target="_blank" rel="noopener noreferrer">${name}</a>`).join(''):'<span class="muted">Các kênh mạng xã hội đang cập nhật.</span>';syncTopSocialLinks();
 }
 
 async function loadEvents(){
@@ -639,27 +639,37 @@ document.getElementById('ownerPasswordForm')?.addEventListener('submit',async ev
 
 
 function syncTopSocialLinks(){
-  const topTikTok=$('#topTikTokLink');
-  const topYoutube=$('#topYoutubeLink');
-
-  // Dùng chính URL đang hiển thị ở cuối trang.
-  const bottomTikTok=$('#tiktokLink');
-  const bottomYoutube=$('#youtubeLink');
-
-  const setTop=(top,bottom)=>{
+  const pairs=[
+    ['#topTikTokLink','#socialLinks a[data-social="tiktok"]'],
+    ['#topYoutubeLink','#socialLinks a[data-social="youtube"]']
+  ];
+  pairs.forEach(([topSel,bottomSel])=>{
+    const top=$(topSel);
     if(!top)return;
+
+    // Ưu tiên lấy trực tiếp link đang dùng ở footer.
+    let bottom=document.querySelector(bottomSel);
+
+    // Fallback: tìm theo nội dung chữ nếu footer cũ chưa có data-social.
+    if(!bottom){
+      const all=[...document.querySelectorAll('#socialLinks a')];
+      bottom=all.find(a=>{
+        const t=(a.textContent||'').toLowerCase();
+        return topSel.includes('TikTok') ? t.includes('tiktok') : t.includes('youtube');
+      });
+    }
+
     const href=(bottom?.getAttribute('href')||'').trim();
     if(href && href!=='#'){
       top.href=href;
       top.hidden=false;
+      top.target='_blank';
+      top.rel='noopener noreferrer';
     }else{
       top.removeAttribute('href');
       top.hidden=true;
     }
-  };
-
-  setTop(topTikTok,bottomTikTok);
-  setTop(topYoutube,bottomYoutube);
+  });
 }
 
 
