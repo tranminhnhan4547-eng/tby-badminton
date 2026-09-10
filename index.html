@@ -28,12 +28,11 @@
 
       <nav>
       <a href="#keo">Lịch kèo</a>
+      <a class="public-lookup-nav" href="#tra-cuu-dang-ky">🔎 Tra cứu</a>
       <a href="#video">Video</a>
       <a href="#noiquy">Nội quy</a>
       <button id="adminBtn" class="btn btn-outline btn-sm">Admin</button>
-    
-        <a class="public-lookup-nav" href="#tra-cuu-dang-ky">🔎 Tra cứu</a>
-</nav>
+    </nav>
   </header>
 
   <main id="top">
@@ -55,6 +54,24 @@
       <div id="events" class="event-grid"><div class="empty-card">Đang tải lịch kèo…</div></div>
     </section>
 
+
+    <section class="container section registration-lookup-section" id="tra-cuu-dang-ky">
+    <div class="section-head">
+      <div>
+        <div class="eyebrow">TRA CỨU ĐĂNG KÝ</div>
+        <h2>Xem lại thông tin sân</h2>
+        <p>Nhập đúng tên hoặc SĐT/Zalo đã dùng khi đăng ký.</p>
+      </div>
+    </div>
+    <div class="lookup-card">
+      <div class="lookup-form">
+        <input id="registrationLookupInput" type="text" autocomplete="off" placeholder="Tên đăng ký hoặc SĐT/Zalo"/>
+        <button id="registrationLookupBtn" class="btn btn-primary" type="button">🔎 Tra cứu</button>
+      </div>
+      <div id="registrationLookupMsg" class="form-msg"></div>
+      <div id="registrationLookupResults" class="lookup-results"></div>
+    </div>
+  </section>
 
     <section class="container section video-section" id="video">
       <div class="section-head">
@@ -100,11 +117,6 @@
         <label class="full">Ghi chú<textarea id="note" rows="3" maxlength="200" placeholder="VD: đi cùng bạn, muốn đánh cặp…"></textarea></label>
       </div>
       <p id="registerMsg" class="form-msg"></p>
-<h3>Thông tin sân của bạn</h3>
-          <div id="registeredCourtInfoBody"></div>
-          <small>Hãy lưu lại thông tin này để đến đúng sân.</small>
-        </div>
-
       <button id="submitRegister" class="btn btn-primary full-btn" type="submit">🏸 Đăng ký slot</button>
     </form>
   </dialog>
@@ -239,23 +251,7 @@
           </form>
         </section>
 
-<section class="section registration-lookup-section" id="tra-cuu-dang-ky">
-    <div class="section-head">
-      <div>
-        <div class="eyebrow">TRA CỨU ĐĂNG KÝ</div>
-        <h2>Xem lại thông tin sân</h2>
-        <p>Nhập đúng tên hoặc SĐT/Zalo đã dùng khi đăng ký.</p>
-      </div>
-    </div>
-    <div class="lookup-card">
-      <div class="lookup-form">
-        <input id="registrationLookupInput" type="text" autocomplete="off" placeholder="Tên đăng ký hoặc SĐT/Zalo"/>
-        <button id="registrationLookupBtn" class="btn btn-primary" type="button">🔎 Tra cứu</button>
-      </div>
-      <div id="registrationLookupMsg" class="form-msg"></div>
-      <div id="registrationLookupResults" class="lookup-results"></div>
-    </div>
-  </section>
+
 
 <section id="videoAdminSection" class="admin-manage-section" hidden>
           <div class="admin-manage-head"><div><span class="kicker">OWNER</span><h3>Quản lý Video TBY</h3></div><button id="videoAdminRefreshBtn" class="btn btn-ghost btn-sm" type="button">↻ Cập nhật</button></div>
