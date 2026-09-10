@@ -47,7 +47,7 @@ function applySettings(s){
   const rules=(s.rules_text||fallbackSettings.rules_text).split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
   $('#rulesList').innerHTML=(rules.length?rules:['Nội quy đang được cập nhật.']).map((r,i)=>`<article><b>${String(i+1).padStart(2,'0')}</b><p>${esc(r)}</p></article>`).join('');
   const links=[['TikTok',s.tiktok_url],['YouTube',s.youtube_url],['Facebook',s.facebook_url],['Zalo',s.zalo_url]].filter(x=>x[1]);
-  $('#socialLinks').innerHTML=links.length?links.map(([name,url])=>`<a href="${esc(url)}" target="_blank" rel="noopener noreferrer">${name}</a>`).join(''):'<span class="muted">Các kênh mạng xã hội đang cập nhật.</span>';syncTopSocialLinks();
+  $('#socialLinks').innerHTML=links.length?links.map(([name,url])=>`<a href="${esc(url)}" target="_blank" rel="noopener noreferrer">${name}</a>`).join(''):'<span class="muted">Các kênh mạng xã hội đang cập nhật.</span>';
 }
 
 async function loadEvents(){
@@ -94,7 +94,8 @@ async function openRegister(id){
   const addr=data.venue_address?`<br>📌 ${esc(data.venue_address)}`:'';
   $('#eventSummary').innerHTML=`📍 <b>${esc(data.venue)}</b>${addr}<br>📅 ${esc(fmtDate(data.event_date))}<br>🕒 ${esc(data.start_time.slice(0,5))} – ${esc(data.end_time.slice(0,5))}<br>🏸 ${esc(data.level_range)}`;
   $('#registerMsg').textContent='';
-$('#registerDialog').showModal();
+  const info=$('#registeredCourtInfo');if(info)info.hidden=true;
+  $('#registerDialog').showModal();
 }
 $('#registerForm').addEventListener('submit',async ev=>{
   ev.preventDefault();const btn=$('#submitRegister');btn.disabled=true;btn.textContent='Đang đăng ký…';
@@ -106,27 +107,18 @@ $('#registerForm').addEventListener('submit',async ev=>{
     msg.className='form-msg ok';msg.textContent='Đăng ký thành công!';
     ev.target.reset();
     const d=(data&&typeof data==='object')?data:{};
-    const courtText=(d.court_number??'').toString().trim();
-    const court=courtText
-      ? `<div class="success-court"><span>SÂN SỐ</span><strong>${esc(courtText)}</strong></div>`
-      : `<div class="success-court"><span>SÂN SỐ</span><strong>Chưa cập nhật</strong></div>`;
-
-    const body=$('#registrationSuccessBody');
-    if(body){
+    const court=d.court_number?`<div class="court-secret"><span>SÂN SỐ</span><strong>${esc(d.court_number)}</strong></div>`:'<div class="court-secret"><span>SÂN SỐ</span><strong>Liên hệ quản lý</strong></div>';
+    const info=$('#registeredCourtInfo'),body=$('#registeredCourtInfoBody');
+    if(info&&body){
       body.innerHTML=`
-        <div class="success-row"><span>📅 Ngày</span><b>${esc(d.event_date?fmtDate(d.event_date):'')}</b></div>
-        <div class="success-row"><span>🕒 Giờ</span><b>${esc((d.start_time||'').slice(0,5))} – ${esc((d.end_time||'').slice(0,5))}</b></div>
-        <div class="success-row"><span>🏸 Sân</span><b>${esc(d.venue||'')}</b></div>
-        <div class="success-row"><span>📍 Địa chỉ</span><b>${esc(d.venue_address||'')}</b></div>
+        <div class="registered-detail"><span>🏸 Sân</span><b>${esc(d.venue||'')}</b></div>
+        <div class="registered-detail"><span>📍 Địa chỉ</span><b>${esc(d.venue_address||'')}</b></div>
+        <div class="registered-detail"><span>📅 Ngày</span><b>${esc(d.event_date?fmtDate(d.event_date):'')}</b></div>
+        <div class="registered-detail"><span>🕒 Giờ</span><b>${esc((d.start_time||'').slice(0,5))} – ${esc((d.end_time||'').slice(0,5))}</b></div>
         ${court}`;
+      info.hidden=false;
+      info.scrollIntoView({behavior:'smooth',block:'nearest'});
     }
-
-    // Hiện thông báo bằng dialog riêng để desktop/mobile đều nhìn thấy ngay.
-    const regDialog=$('#registerDialog');
-    const successDialog=$('#registrationSuccessDialog');
-    if(regDialog?.open) regDialog.close();
-    if(successDialog && !successDialog.open) successDialog.showModal();
-
     await loadEvents();
   }
   btn.disabled=false;btn.textContent='🏸 Đăng ký slot';
@@ -634,74 +626,5 @@ document.getElementById('ownerPasswordForm')?.addEventListener('submit',async ev
   document.getElementById('ownerNewPassword2').value='';
   m.className='form-msg ok';
   m.textContent='Đã đặt mật khẩu mới. Từ giờ bạn có thể đăng nhập bằng email + mật khẩu trên điện thoại và PC.';
-});
-
-
-
-function syncTopSocialLinks(){
-  const s=currentSettings||fallbackSettings;
-  const links=[
-    ['#topTikTokLink',s.tiktok_url],
-    ['#topYoutubeLink',s.youtube_url]
-  ];
-  links.forEach(([selector,url])=>{
-    const a=$(selector);
-    if(!a)return;
-    if(url){
-      a.href=url;
-      a.hidden=false;
-    }else{
-      a.removeAttribute('href');
-      a.hidden=true;
-    }
-  });
-}
-
-
-window.addEventListener('DOMContentLoaded',syncTopSocialLinks);
-});
-
-
-function lookupResultCard(x){
-  const court=x.court_number
-    ? `<div class="lookup-court-number"><span>SÂN SỐ</span><strong>${esc(x.court_number)}</strong></div>`
-    : `<div class="lookup-court-number"><span>SÂN SỐ</span><strong>Liên hệ quản lý</strong></div>`;
-  return `<article class="lookup-result-card">
-    <div class="lookup-status">✅ ĐÃ ĐĂNG KÝ</div>
-    <h3>${esc(x.title||'Kèo TBY')}</h3>
-    <div class="lookup-row"><span>👤 Người đăng ký</span><b>${esc(x.full_name||'')}</b></div>
-    <div class="lookup-row"><span>🏸 Sân</span><b>${esc(x.venue||'')}</b></div>
-    <div class="lookup-row"><span>📍 Địa chỉ</span><b>${esc(x.venue_address||'')}</b></div>
-    <div class="lookup-row"><span>📅 Ngày</span><b>${esc(x.event_date?fmtDate(x.event_date):'')}</b></div>
-    <div class="lookup-row"><span>🕒 Giờ</span><b>${esc((x.start_time||'').slice(0,5))} – ${esc((x.end_time||'').slice(0,5))}</b></div>
-    ${court}
-  </article>`;
-}
-async function lookupRegistration(){
-  const q=$('#registrationLookupInput')?.value.trim()||'';
-  const msg=$('#registrationLookupMsg'),root=$('#registrationLookupResults');
-  if(!q){msg.className='form-msg err';msg.textContent='Nhập tên đăng ký hoặc SĐT/Zalo.';root.innerHTML='';return;}
-  msg.className='form-msg';msg.textContent='Đang tra cứu…';root.innerHTML='';
-  const {data,error}=await supabase.rpc('lookup_registration_court',{p_query:q});
-  if(error){msg.className='form-msg err';msg.textContent=error.message;return;}
-  const rows=Array.isArray(data)?data:(data?[data]:[]);
-  if(!rows.length){msg.className='form-msg err';msg.textContent='Không tìm thấy đăng ký phù hợp.';return;}
-  msg.className='form-msg ok';msg.textContent=`Tìm thấy ${rows.length} đăng ký.`;
-  root.innerHTML=rows.map(lookupResultCard).join('');
-}
-$('#registrationLookupBtn')?.addEventListener('click',lookupRegistration);
-$('#registrationLookupInput')?.addEventListener('keydown',e=>{if(e.key==='Enter')lookupRegistration();});
-
-
-
-$('#successHomeBtn')?.addEventListener('click',()=>{
-  const d=$('#registrationSuccessDialog');
-  if(d?.open)d.close();
-  window.scrollTo({top:0,behavior:'smooth'});
-});
-$('#successLookupBtn')?.addEventListener('click',()=>{
-  const d=$('#registrationSuccessDialog');
-  if(d?.open)d.close();
-  document.querySelector('#tra-cuu-dang-ky')?.scrollIntoView({behavior:'smooth',block:'start'});
 });
 
