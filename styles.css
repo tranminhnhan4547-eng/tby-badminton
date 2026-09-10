@@ -112,3 +112,14 @@
   .success-court strong{font-size:34px}
   .success-actions{grid-template-columns:1fr}
 }
+
+/* Public registration lookup */
+.public-lookup-nav{
+  display:inline-flex;align-items:center;justify-content:center;
+  text-decoration:none;font-weight:800;white-space:nowrap
+}
+#tra-cuu-dang-ky{display:block!important;visibility:visible!important}
+#tra-cuu-dang-ky .lookup-card{display:block!important}
+@media(max-width:640px){
+  .public-lookup-nav{font-size:12px}
+}
