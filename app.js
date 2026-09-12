@@ -146,6 +146,7 @@ function eventCard(e){
             ${players.length?players.map((p,i)=>{
               const initials=(p.full_name||'?').trim().split(/\s+/).slice(-2).map(x=>x[0]||'').join('').toUpperCase();
               return `<div class="player ${i>=3?'player-extra':''}">
+                <span class="player-index">${i+1}</span>
                 <span class="player-avatar">${esc(initials||'?')}</span>
                 <span class="player-name">${esc(p.full_name)}</span>
                 <span class="player-level">${p.gender==='male'?'Nam':'Nữ'} · ${esc(p.level)}</span>
