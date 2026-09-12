@@ -96,10 +96,11 @@ function eventCard(e){
         <div class="year">${esc(e.event_date.slice(0,4))}</div>
       </div>
       <div class="event-slogan" aria-hidden="true">
-        <span>Good</span>
-        <span>Players</span>
-        <span>Better</span>
-        <span>Friends</span>
+        <div class="event-slogan-line one">Good</div>
+        <div class="event-slogan-line two">Players</div>
+        <div class="event-slogan-line three">Better</div>
+        <div class="event-slogan-line four">Friends</div>
+        <div class="event-slogan-stroke"></div>
       </div>
     </div>
 
