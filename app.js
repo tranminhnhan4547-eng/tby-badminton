@@ -59,12 +59,19 @@ async function loadEvents(){
   if(!data?.length){root.innerHTML='<div class="empty-card">Hiện chưa có kèo mới.</div>';return;}
   root.innerHTML=data.map(eventCard).join('');
   root.querySelectorAll('[data-register]').forEach(btn=>btn.addEventListener('click',()=>openRegister(btn.dataset.register)));
+  root.querySelectorAll('[data-player-toggle]').forEach(btn=>btn.addEventListener('click',()=>{
+    const list=btn.closest('[data-player-list]');
+    if(!list)return;
+    const expanded=list.classList.toggle('expanded');
+    btn.textContent=expanded?'Thu gọn ↑':'Xem tất cả ›';
+  }));
 }
 function eventCard(e){
   const maleCount=Number(e.male_count||0);
   const femaleCount=Number(e.female_count||0);
   const totalCount=Number(e.total_count ?? (maleCount+femaleCount));
   const totalSlots=Math.max(1,Number(e.total_slots||10));
+  const remaining=Math.max(0,totalSlots-totalCount);
   const totalPct=Math.min(100,Math.round((totalCount/totalSlots)*100));
   const cancelled=!!e.is_cancelled;
   const full=totalCount>=totalSlots;
@@ -72,19 +79,76 @@ function eventCard(e){
   const players=[...(e.players||[])];
   const statusText=cancelled?'ĐÃ HỦY KÈO':(!e.is_open?'ĐÃ ĐÓNG ĐĂNG KÝ':(full?'ĐÃ ĐỦ SLOT':'ĐANG MỞ ĐĂNG KÝ'));
   const statusClass=cancelled?'cancelled':(open?'open':'closed');
-  const buttonText=cancelled?'Kèo đã hủy':(!e.is_open?'Đã đóng đăng ký':(full?'Đã đủ slot':'Đăng ký slot →'));
+  const buttonText=cancelled?'Kèo đã hủy':(!e.is_open?'Đã đóng đăng ký':(full?'Đã đủ slot':'✎ Đăng ký ngay'));
+  const dateParts=fmtDate(e.event_date).split(',');
+  const dayText=dateParts[0]||'';
+  const venueAddress=e.venue_address?`<small class="venue-address">${esc(e.venue_address)}</small>`:'';
+  const heroImage=e.image_url
+    ? `<img class="event-image" src="${esc(e.image_url)}" alt="Ảnh ${esc(e.title)}">`
+    : `<div class="event-image event-image-placeholder"></div>`;
+
   return `<article class="event-card ${cancelled?'event-cancelled':''}">
-    ${e.image_url?`<img class="event-image" src="${esc(e.image_url)}" alt="Ảnh ${esc(e.title)}">`:''}
-    <div class="date-box"><div><div class="day">${esc(fmtDate(e.event_date).split(',')[0])}</div><div class="date">${esc(e.event_date.slice(8,10))}/${esc(e.event_date.slice(5,7))}</div><div>${esc(e.event_date.slice(0,4))}</div></div></div>
-    <div class="event-main"><span class="status ${statusClass}">${statusText}</span><h3>${esc(e.title)}</h3>
-      <div class="meta"><span>📍 ${esc(e.venue)}</span><span>🕒 ${esc(e.start_time.slice(0,5))} – ${esc(e.end_time.slice(0,5))}</span><span>💰 Nam ${e.male_fee||0}k · Nữ ${e.female_fee||0}k</span><span>🏸 Trình: ${esc(e.level_range)}</span></div>
-      <div class="slots">
-        <div class="slot-box total"><div class="slot-title"><span>TỔNG SLOT</span><span>${totalCount}/${totalSlots}</span></div><div class="slot-count">${full?'Đã đủ':`Còn ${Math.max(0,totalSlots-totalCount)} slot`}</div><div class="bar"><span style="width:${totalPct}%"></span></div></div>
-        <div class="slot-box"><div class="slot-title"><span>NAM</span><span>${maleCount} người</span></div><div class="slot-count small">${maleCount}</div></div>
-        <div class="slot-box female"><div class="slot-title"><span>NỮ</span><span>${femaleCount} người</span></div><div class="slot-count small">${femaleCount}</div></div>
+    <div class="event-hero">
+      ${heroImage}
+      <div class="date-box">
+        <div class="day">${esc(dayText)}</div>
+        <div class="date">${esc(e.event_date.slice(8,10))}/${esc(e.event_date.slice(5,7))}</div>
+        <div class="year">${esc(e.event_date.slice(0,4))}</div>
       </div>
     </div>
-    <div class="event-side"><div class="player-list"><h4>Danh sách đã đăng ký</h4>${players.length?players.map(p=>`<div class="player"><span>${esc(p.full_name)}</span><span>${p.gender==='male'?'Nam':'Nữ'} · ${esc(p.level)}</span></div>`).join(''):'<span class="muted">Chưa có người đăng ký.</span>'}</div><button class="btn btn-primary" data-register="${e.id}" ${open?'':'disabled'}>${buttonText}</button></div>
+
+    <div class="event-body">
+      <div class="event-main">
+        <span class="status ${statusClass}">${statusText}</span>
+        <h3>${esc(e.title)}</h3>
+
+        <div class="meta">
+          <span class="meta-line"><i>📍</i><b>${esc(e.venue)}</b>${venueAddress}</span>
+          <span class="meta-line"><i>🕒</i>${esc(e.start_time.slice(0,5))} – ${esc(e.end_time.slice(0,5))}</span>
+          <span class="meta-line"><i>💰</i>Nam ${e.male_fee||0}k · Nữ ${e.female_fee||0}k</span>
+          <span class="meta-line"><i>🏸</i>Trình: ${esc(e.level_range)}</span>
+        </div>
+
+        <div class="slot-box total event-total-slot">
+          <div class="slot-title"><span>TỔNG SLOT</span><span>${totalCount}/${totalSlots}</span></div>
+          <div class="slot-count">${full?'Đã đủ slot':`Còn ${remaining} slot`}</div>
+          <div class="bar"><span style="width:${totalPct}%"></span></div>
+        </div>
+
+        <div class="gender-slots">
+          <div class="slot-box male">
+            <div class="slot-title"><span>NAM</span><span>${maleCount} người</span></div>
+            <div class="slot-count small">${maleCount}</div>
+          </div>
+          <div class="slot-box female">
+            <div class="slot-title"><span>NỮ</span><span>${femaleCount} người</span></div>
+            <div class="slot-count small">${femaleCount}</div>
+          </div>
+        </div>
+
+        <button class="btn btn-primary event-register-mobile" data-register="${e.id}" ${open?'':'disabled'}>${buttonText}</button>
+      </div>
+
+      <aside class="event-side">
+        <div class="player-list" data-player-list>
+          <div class="player-list-head">
+            <h4>Danh sách đã đăng ký</h4>
+            ${players.length>3?'<button type="button" class="player-toggle" data-player-toggle>Xem tất cả ›</button>':''}
+          </div>
+          <div class="player-items">
+            ${players.length?players.map((p,i)=>{
+              const initials=(p.full_name||'?').trim().split(/\s+/).slice(-2).map(x=>x[0]||'').join('').toUpperCase();
+              return `<div class="player ${i>=3?'player-extra':''}">
+                <span class="player-avatar">${esc(initials||'?')}</span>
+                <span class="player-name">${esc(p.full_name)}</span>
+                <span class="player-level">${p.gender==='male'?'Nam':'Nữ'} · ${esc(p.level)}</span>
+              </div>`;
+            }).join(''):'<span class="muted">Chưa có người đăng ký.</span>'}
+          </div>
+        </div>
+        <button class="btn btn-primary event-register-desktop" data-register="${e.id}" ${open?'':'disabled'}>${buttonText}</button>
+      </aside>
+    </div>
   </article>`;
 }
 async function openRegister(id){
