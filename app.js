@@ -166,6 +166,33 @@ async function openRegister(id){
   $('#registerMsg').textContent='';
 $('#registerDialog').showModal();
 }
+// Gửi thông báo Discord sau khi Supabase đã đăng ký thành công.
+// Webhook thật được giữ trong Supabase Secret DISCORD_WEBHOOK_URL, không nằm trong source GitHub Pages.
+async function notifyDiscordRegistration(payload, registrationData={}){
+  try{
+    const base=(window.TBY_CONFIG?.SUPABASE_URL||'').replace(/\/$/,'');
+    if(!base)return;
+    const d=(registrationData&&typeof registrationData==='object')?registrationData:{};
+    const response=await fetch(`${base}/functions/v1/discord-notify`,{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        name:payload.full_name,
+        phone:payload.phone,
+        gender:payload.gender==='male'?'Nam':payload.gender==='female'?'Nữ':payload.gender,
+        level:payload.level,
+        event:d.title||$('#registerTitle')?.textContent||'Kèo TBY',
+        time:(d.start_time||d.end_time)?`${(d.start_time||'').slice(0,5)} – ${(d.end_time||'').slice(0,5)}`:'',
+        court:(d.court_number??'').toString().trim()||d.venue||'Chưa cập nhật'
+      })
+    });
+    if(!response.ok)console.warn('Discord notify failed:',response.status,await response.text());
+  }catch(err){
+    // Discord lỗi không được làm hỏng luồng đăng ký của khách.
+    console.warn('Discord notify error:',err);
+  }
+}
+
 $('#registerForm').addEventListener('submit',async ev=>{
   ev.preventDefault();const btn=$('#submitRegister');btn.disabled=true;btn.textContent='Đang đăng ký…';
   const payload={event_id:$('#eventId').value,full_name:$('#fullName').value.trim(),gender:$('#gender').value,level:$('#level').value,phone:$('#phone').value.trim(),note:$('#note').value.trim()};
@@ -174,8 +201,10 @@ $('#registerForm').addEventListener('submit',async ev=>{
     msg.className='form-msg err';msg.textContent=error.message;
   }else{
     msg.className='form-msg ok';msg.textContent='Đăng ký thành công!';
-    ev.target.reset();
     const d=(data&&typeof data==='object')?data:{};
+    // Không await: khách thấy thành công ngay; Discord chạy độc lập phía sau.
+    void notifyDiscordRegistration(payload,d);
+    ev.target.reset();
     const courtText=(d.court_number??'').toString().trim();
     const court=courtText
       ? `<div class="success-court"><span>SÂN SỐ</span><strong>${esc(courtText)}</strong></div>`
