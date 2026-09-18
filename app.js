@@ -71,6 +71,10 @@ async function loadEvents(){
   const {data,error}=await supabase.from('events_public').select('*').gte('event_date',today()).order('event_date').order('start_time');
   if(error){root.innerHTML=`<div class="empty-card">Lỗi tải dữ liệu: ${esc(error.message)}</div>`;return;}
   if(!data?.length){root.innerHTML='<div class="empty-card">Hiện chưa có kèo mới.</div>';return;}
+  const {data:mapRows,error:mapError}=await supabase.rpc('public_event_maps',{p_event_ids:data.map(e=>e.id)});
+  if(mapError)console.warn('Không tải được link Google Maps:',mapError.message);
+  const mapLinks=new Map((mapRows||[]).map(e=>[e.id,e.google_maps_url]));
+  for(const event of data)event.google_maps_url=mapLinks.get(event.id)||'';
   root.innerHTML=data.map(eventCard).join('');
   root.querySelectorAll('[data-register]').forEach(btn=>btn.addEventListener('click',()=>openRegister(btn.dataset.register)));
   root.querySelectorAll('[data-player-toggle]').forEach(btn=>btn.addEventListener('click',()=>{
@@ -125,6 +129,7 @@ function eventCard(e){
 
         <div class="meta">
           <span class="meta-line"><i>📍</i><b>${esc(e.venue)}</b>${venueAddress}</span>
+          ${mapsButton(e.google_maps_url)}
           <span class="meta-line"><i>🕒</i>${esc(e.start_time.slice(0,5))} – ${esc(e.end_time.slice(0,5))}</span>
           <span class="meta-line"><i>💰</i>Nam ${e.male_fee||0}k · Nữ ${e.female_fee||0}k</span>
           <span class="meta-line"><i>🏸</i>Trình: ${esc(e.level_range)}</span>
@@ -818,4 +823,3 @@ window.addEventListener('pageshow',()=>{
     try{dlg.close();}catch(e){}
   }
 });
-
