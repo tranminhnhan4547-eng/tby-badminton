@@ -32,6 +32,20 @@ const fallbackSettings={
   logo_url:'',hero_image_url:'',background_image_url:'',tiktok_url:'',youtube_url:'',facebook_url:'',zalo_url:''
 };
 
+function mapsUrl(value){
+  const raw=String(value||'').trim();
+  if(!raw)return '';
+  try{
+    const url=new URL(raw);
+    if(!['https:','http:'].includes(url.protocol)||url.username||url.password)return '';
+    return raw;
+  }catch{return '';}
+}
+function mapsButton(value){
+  const url=mapsUrl(value);
+  return url?`<a class="btn btn-outline btn-sm" href="${esc(url)}" target="_blank" rel="noopener noreferrer">🗺️ Mở Google Maps</a>`:'';
+}
+
 async function loadSiteSettings(){
   if(!supabase){applySettings(fallbackSettings);return;}
   const {data,error}=await supabase.from('site_settings').select('*').eq('id',1).maybeSingle();
@@ -217,6 +231,7 @@ $('#registerForm').addEventListener('submit',async ev=>{
         <div class="success-row"><span>🕒 Giờ</span><b>${esc((d.start_time||'').slice(0,5))} – ${esc((d.end_time||'').slice(0,5))}</b></div>
         <div class="success-row"><span>🏸 Sân</span><b>${esc(d.venue||'')}</b></div>
         <div class="success-row"><span>📍 Địa chỉ</span><b>${esc(d.venue_address||'')}</b></div>
+        ${mapsButton(d.google_maps_url)}
         ${court}`;
     }
 
@@ -384,7 +399,7 @@ async function recoverMobileAuthSession(){
 }
 
 function resetEventForm(){
-  $('#eventForm').reset();$('#editingEventId').value='';$('#eVenueAddress').value='';$('#eCourtNumber').value='';$('#eLevel').value='Yếu+ → TB-';$('#eTotal').value=10;$('#eMaleFee').value=65;$('#eFemaleFee').value=55;$('#eOpen').checked=true;$('#eventFormHeading').textContent='Tạo kèo mới';$('#saveEventBtn').textContent='Tạo kèo';$('#cancelEditBtn').hidden=true;$('#eventImagePreview').hidden=true;$('#removeEventImageBtn').hidden=true;$('#eImageFile').value='';pendingRemoveEventImage=false;$('#eOpen').disabled=currentAdminRole!=='owner';
+  $('#eventForm').reset();$('#editingEventId').value='';$('#eVenueAddress').value='';$('#eGoogleMapsUrl').value='';$('#eCourtNumber').value='';$('#eLevel').value='Yếu+ → TB-';$('#eTotal').value=10;$('#eMaleFee').value=65;$('#eFemaleFee').value=55;$('#eOpen').checked=true;$('#eventFormHeading').textContent='Tạo kèo mới';$('#saveEventBtn').textContent='Tạo kèo';$('#cancelEditBtn').hidden=true;$('#eventImagePreview').hidden=true;$('#removeEventImageBtn').hidden=true;$('#eImageFile').value='';pendingRemoveEventImage=false;$('#eOpen').disabled=currentAdminRole!=='owner';
 }
 $('#cancelEditBtn').addEventListener('click',resetEventForm);
 $('#eImageFile').addEventListener('change',()=>{const f=$('#eImageFile').files[0];if(!f)return;$('#eventImagePreview').src=URL.createObjectURL(f);$('#eventImagePreview').hidden=false;$('#removeEventImageBtn').hidden=false;pendingRemoveEventImage=false;});
@@ -401,7 +416,11 @@ async function removeMediaUrl(url){const p=storagePathFromUrl(url);if(p)await su
 $('#eventForm').addEventListener('submit',async ev=>{
   ev.preventDefault();if(!currentAdminUser||!['owner','admin'].includes(currentAdminRole))return alert('Chỉ Owner/Admin mới được chỉnh kèo.');
   const id=$('#editingEventId').value||null;const old=id?currentAdminEvents.find(x=>x.id===id):null;
-  const totalSlots=Math.max(1,+$('#eTotal').value||1);const p={title:$('#eTitle').value.trim(),venue:$('#eVenue').value.trim(),venue_address:$('#eVenueAddress').value.trim(),event_date:$('#eDate').value,start_time:$('#eStart').value,end_time:$('#eEnd').value,level_range:$('#eLevel').value.trim(),total_slots:totalSlots,male_fee:+$('#eMaleFee').value||0,female_fee:+$('#eFemaleFee').value||0};if(currentAdminRole==='owner')p.is_open=$('#eOpen').checked;
+  const rawMapsUrl=$('#eGoogleMapsUrl').value.trim();
+  if(rawMapsUrl&&!mapsUrl(rawMapsUrl)){
+    $('#adminMsg').className='form-msg err';$('#adminMsg').textContent='Link Google Maps phải là URL đầy đủ bắt đầu bằng https:// hoặc http://.';return;
+  }
+  const totalSlots=Math.max(1,+$('#eTotal').value||1);const p={title:$('#eTitle').value.trim(),venue:$('#eVenue').value.trim(),venue_address:$('#eVenueAddress').value.trim(),google_maps_url:rawMapsUrl||null,event_date:$('#eDate').value,start_time:$('#eStart').value,end_time:$('#eEnd').value,level_range:$('#eLevel').value.trim(),total_slots:totalSlots,male_fee:+$('#eMaleFee').value||0,female_fee:+$('#eFemaleFee').value||0};if(currentAdminRole==='owner')p.is_open=$('#eOpen').checked;
   const m=$('#adminMsg');m.textContent='Đang lưu…';m.className='form-msg';
   try{
     let eventId=id;
@@ -417,6 +436,12 @@ $('#eventForm').addEventListener('submit',async ev=>{
 async function loadAdminEvents(){
   const root=$('#adminEventList');if(!currentAdminUser){root.innerHTML='';return;}root.innerHTML='<div class="admin-empty">Đang tải kèo…</div>';
   const {data,error}=await supabase.from('events_public').select('*').order('event_date',{ascending:false}).order('start_time',{ascending:false}).limit(50);if(error){root.innerHTML=`<div class="admin-empty">${esc(error.message)}</div>`;return;}
+  if(['owner','admin'].includes(currentAdminRole)&&data?.length){
+    const {data:mapRows,error:mapError}=await supabase.from('events').select('id,google_maps_url').in('id',data.map(e=>e.id));
+    if(mapError){root.innerHTML=`<div class="admin-empty">${esc(mapError.message)}</div>`;return;}
+    const links=new Map((mapRows||[]).map(e=>[e.id,e.google_maps_url]));
+    for(const event of data)event.google_maps_url=links.get(event.id)||'';
+  }
   currentAdminEvents=data||[];if(!currentAdminEvents.length){root.innerHTML='<div class="admin-empty">Chưa có kèo nào.</div>';return;}root.innerHTML=currentAdminEvents.map(adminEventCard).join('');
   root.querySelectorAll('[data-admin-edit]').forEach(b=>b.addEventListener('click',()=>editEvent(b.dataset.adminEdit)));
   root.querySelectorAll('[data-admin-cancel]').forEach(b=>b.addEventListener('click',()=>toggleCancelEvent(b.dataset.adminCancel,b.dataset.cancelled==='true')));
@@ -436,7 +461,7 @@ function adminEventCard(e){
 function editEvent(id){
   if(!['owner','admin'].includes(currentAdminRole))return;
   const e=currentAdminEvents.find(x=>x.id===id);if(!e)return;
-  $('#editingEventId').value=e.id;$('#eTitle').value=e.title;$('#eVenue').value=e.venue;$('#eVenueAddress').value=e.venue_address||'';$('#eCourtNumber').value='';$('#eDate').value=e.event_date;$('#eStart').value=e.start_time.slice(0,5);$('#eEnd').value=e.end_time.slice(0,5);$('#eLevel').value=e.level_range;$('#eTotal').value=e.total_slots||10;$('#eMaleFee').value=e.male_fee||0;$('#eFemaleFee').value=e.female_fee||0;$('#eOpen').checked=!!e.is_open;$('#eOpen').disabled=currentAdminRole!=='owner';$('#eImageFile').value='';pendingRemoveEventImage=false;$('#eventFormHeading').textContent='Sửa kèo';$('#saveEventBtn').textContent='Lưu thay đổi';$('#cancelEditBtn').hidden=false;
+  $('#editingEventId').value=e.id;$('#eTitle').value=e.title;$('#eVenue').value=e.venue;$('#eVenueAddress').value=e.venue_address||'';$('#eGoogleMapsUrl').value=e.google_maps_url||'';$('#eCourtNumber').value='';$('#eDate').value=e.event_date;$('#eStart').value=e.start_time.slice(0,5);$('#eEnd').value=e.end_time.slice(0,5);$('#eLevel').value=e.level_range;$('#eTotal').value=e.total_slots||10;$('#eMaleFee').value=e.male_fee||0;$('#eFemaleFee').value=e.female_fee||0;$('#eOpen').checked=!!e.is_open;$('#eOpen').disabled=currentAdminRole!=='owner';$('#eImageFile').value='';pendingRemoveEventImage=false;$('#eventFormHeading').textContent='Sửa kèo';$('#saveEventBtn').textContent='Lưu thay đổi';$('#cancelEditBtn').hidden=false;
   if(e.image_url){$('#eventImagePreview').src=e.image_url;$('#eventImagePreview').hidden=false;$('#removeEventImageBtn').hidden=false;}else{$('#eventImagePreview').hidden=true;$('#removeEventImageBtn').hidden=true;}
   supabase.rpc('admin_get_event_court',{p_event_id:e.id}).then(({data,error})=>{
     if(!error&&data!==null&&data!==undefined)$('#eCourtNumber').value=typeof data==='string'?data:(data.court_number||'');
@@ -750,6 +775,7 @@ function lookupResultCard(x){
     <div class="lookup-row"><span>👤 Người đăng ký</span><b>${esc(x.full_name||'')}</b></div>
     <div class="lookup-row"><span>🏸 Sân</span><b>${esc(x.venue||'')}</b></div>
     <div class="lookup-row"><span>📍 Địa chỉ</span><b>${esc(x.venue_address||'')}</b></div>
+    ${mapsButton(x.google_maps_url)}
     <div class="lookup-row"><span>📅 Ngày</span><b>${esc(x.event_date?fmtDate(x.event_date):'')}</b></div>
     <div class="lookup-row"><span>🕒 Giờ</span><b>${esc((x.start_time||'').slice(0,5))} – ${esc((x.end_time||'').slice(0,5))}</b></div>
     ${court}
@@ -760,7 +786,7 @@ async function lookupRegistration(){
   const msg=$('#registrationLookupMsg'),root=$('#registrationLookupResults');
   if(!q){msg.className='form-msg err';msg.textContent='Nhập tên đăng ký hoặc SĐT/Zalo.';root.innerHTML='';return;}
   msg.className='form-msg';msg.textContent='Đang tra cứu…';root.innerHTML='';
-  const {data,error}=await supabase.rpc('lookup_registration_court',{p_query:q});
+  const {data,error}=await supabase.rpc('lookup_registration_court_with_maps',{p_query:q});
   if(error){msg.className='form-msg err';msg.textContent=error.message;return;}
   const rows=Array.isArray(data)?data:(data?[data]:[]);
   if(!rows.length){msg.className='form-msg err';msg.textContent='Không tìm thấy đăng ký phù hợp.';return;}
