@@ -245,6 +245,7 @@
             <label>YouTube<input id="sYouTube" type="url" placeholder="https://www.youtube.com/@..."/></label>
             <label>Facebook<input id="sFacebook" type="url" placeholder="https://facebook.com/..."/></label>
             <label>Zalo / nhóm Zalo<input id="sZalo" type="url" placeholder="https://zalo.me/..."/></label>
+            <label>SĐT / Zalo Host<input id="sHostContact" type="text" inputmode="tel" placeholder="09xx xxx xxx"/><small>Số này sẽ hiện khi khách bấm Hủy slot.</small></label>
             <button class="btn btn-primary full-btn" type="submit">Lưu giao diện website</button>
           </form>
           <p id="siteSettingsMsg" class="form-msg"></p>
@@ -302,6 +303,26 @@
           <p class="muted admin-note">Khách chỉ thấy tên, giới tính và trình độ. Owner/Admin/Moderator mới thấy SĐT/Zalo, ghi chú và nút xóa slot.</p>
           <div id="adminEventList" class="admin-event-list"></div>
         </section>
+      </div>
+    </div>
+  </dialog>
+
+
+  <dialog id="cancelSlotDialog" class="cancel-slot-dialog">
+    <div class="cancel-slot-card">
+      <button type="button" class="cancel-slot-close" data-close-cancel aria-label="Đóng">×</button>
+      <div class="cancel-slot-icon">📞</div>
+      <span class="kicker">HỖ TRỢ HỦY SLOT</span>
+      <h2>Vui lòng liên hệ Host</h2>
+      <p>Để tránh người khác hủy nhầm đăng ký, khách không thể tự xóa slot trên website.</p>
+      <div class="cancel-host-contact">
+        <span>SĐT / Zalo Host</span>
+        <strong id="cancelHostContact">Vui lòng liên hệ Host TBY</strong>
+      </div>
+      <div class="cancel-slot-actions">
+        <a id="cancelCallBtn" class="btn btn-primary" href="#" hidden>📞 Gọi Host</a>
+        <a id="cancelZaloBtn" class="btn btn-ghost" href="#" target="_blank" rel="noopener" hidden>💬 Mở Zalo</a>
+        <button type="button" class="btn btn-ghost" data-close-cancel>Đóng</button>
       </div>
     </div>
   </dialog>

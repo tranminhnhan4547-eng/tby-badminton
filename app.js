@@ -29,7 +29,7 @@ const fallbackSettings={
   hero_title:'Chơi hết mình.\nKết nối bền lâu.',
   hero_subtitle:'Đăng ký slot vãng lai nhanh, xem chỗ trống theo thời gian thực và nhận thông tin kèo ngay trên điện thoại.',
   rules_text:'Đi đúng giờ, có mặt sớm để khởi động.\nNếu bận, báo hủy sớm để nhường slot.\nChọn đúng trình để ghép trận cân bằng.\nChơi fair-play, tôn trọng đồng đội và đối thủ.',
-  logo_url:'',hero_image_url:'',background_image_url:'',tiktok_url:'',youtube_url:'',facebook_url:'',zalo_url:''
+  logo_url:'',hero_image_url:'',background_image_url:'',tiktok_url:'',youtube_url:'',facebook_url:'',zalo_url:'',host_contact:''
 };
 
 function mapsUrl(value){
@@ -717,8 +717,8 @@ async function deleteTeamVideo(id,url,type='upload'){
   await Promise.all([loadTeamVideos(),loadAdminVideos()]);
 }
 
-async function populateSettingsForm(){await loadSiteSettings();const s=currentSettings||fallbackSettings;$('#sHeroTitle').value=s.hero_title||'';$('#sHeroSubtitle').value=s.hero_subtitle||'';$('#sRules').value=s.rules_text||'';$('#sTikTok').value=s.tiktok_url||'';$('#sYouTube').value=s.youtube_url||'';$('#sFacebook').value=s.facebook_url||'';$('#sZalo').value=s.zalo_url||'';}
-$('#siteSettingsForm').addEventListener('submit',async ev=>{ev.preventDefault();if(currentAdminRole!=='owner')return alert('Chỉ Owner được chỉnh giao diện website.');const m=$('#siteSettingsMsg');m.textContent='Đang lưu…';m.className='form-msg';try{let s={...(currentSettings||fallbackSettings),hero_title:$('#sHeroTitle').value.trim(),hero_subtitle:$('#sHeroSubtitle').value.trim(),rules_text:$('#sRules').value.trim(),tiktok_url:$('#sTikTok').value.trim(),youtube_url:$('#sYouTube').value.trim(),facebook_url:$('#sFacebook').value.trim(),zalo_url:$('#sZalo').value.trim()};const files=[['sLogoFile','logo_url','site/logo'],['sHeroFile','hero_image_url','site/hero'],['sBackgroundFile','background_image_url','site/background']];for(const [input,key,path] of files){const f=$(`#${input}`).files[0];if(f){if(s[key])await removeMediaUrl(s[key]);s[key]=await uploadMedia(f,`${path}-${Date.now()}`);}}const {error}=await supabase.from('site_settings').upsert({id:1,...s,updated_at:new Date().toISOString()});if(error)throw error;m.className='form-msg ok';m.textContent='Đã cập nhật website.';currentSettings=s;applySettings(s);ev.target.querySelectorAll('input[type=file]').forEach(x=>x.value='');}catch(err){m.className='form-msg err';m.textContent=err.message||String(err);}});
+async function populateSettingsForm(){await loadSiteSettings();const s=currentSettings||fallbackSettings;$('#sHeroTitle').value=s.hero_title||'';$('#sHeroSubtitle').value=s.hero_subtitle||'';$('#sRules').value=s.rules_text||'';$('#sTikTok').value=s.tiktok_url||'';$('#sYouTube').value=s.youtube_url||'';$('#sFacebook').value=s.facebook_url||'';$('#sZalo').value=s.zalo_url||'';$('#sHostContact').value=s.host_contact||'';}
+$('#siteSettingsForm').addEventListener('submit',async ev=>{ev.preventDefault();if(currentAdminRole!=='owner')return alert('Chỉ Owner được chỉnh giao diện website.');const m=$('#siteSettingsMsg');m.textContent='Đang lưu…';m.className='form-msg';try{let s={...(currentSettings||fallbackSettings),hero_title:$('#sHeroTitle').value.trim(),hero_subtitle:$('#sHeroSubtitle').value.trim(),rules_text:$('#sRules').value.trim(),tiktok_url:$('#sTikTok').value.trim(),youtube_url:$('#sYouTube').value.trim(),facebook_url:$('#sFacebook').value.trim(),zalo_url:$('#sZalo').value.trim(),host_contact:$('#sHostContact').value.trim()};const files=[['sLogoFile','logo_url','site/logo'],['sHeroFile','hero_image_url','site/hero'],['sBackgroundFile','background_image_url','site/background']];for(const [input,key,path] of files){const f=$(`#${input}`).files[0];if(f){if(s[key])await removeMediaUrl(s[key]);s[key]=await uploadMedia(f,`${path}-${Date.now()}`);}}const {error}=await supabase.from('site_settings').upsert({id:1,...s,updated_at:new Date().toISOString()});if(error)throw error;m.className='form-msg ok';m.textContent='Đã cập nhật website.';currentSettings=s;applySettings(s);ev.target.querySelectorAll('input[type=file]').forEach(x=>x.value='');}catch(err){m.className='form-msg err';m.textContent=err.message||String(err);}});
 
 await recoverMobileAuthSession();
 await Promise.all([loadSiteSettings(),loadEvents(),loadTeamVideos()]);
@@ -784,6 +784,7 @@ function lookupResultCard(x){
     <div class="lookup-row"><span>📅 Ngày</span><b>${esc(x.event_date?fmtDate(x.event_date):'')}</b></div>
     <div class="lookup-row"><span>🕒 Giờ</span><b>${esc((x.start_time||'').slice(0,5))} – ${esc((x.end_time||'').slice(0,5))}</b></div>
     ${court}
+    <button type="button" class="btn lookup-cancel-slot" data-cancel-slot>❌ Hủy slot</button>
   </article>`;
 }
 async function lookupRegistration(){
@@ -797,6 +798,26 @@ async function lookupRegistration(){
   if(!rows.length){msg.className='form-msg err';msg.textContent='Không tìm thấy đăng ký phù hợp.';return;}
   msg.className='form-msg ok';msg.textContent=`Tìm thấy ${rows.length} đăng ký.`;
   root.innerHTML=rows.map(lookupResultCard).join('');
+  root.querySelectorAll('[data-cancel-slot]').forEach(btn=>btn.addEventListener('click',showCancelSlotNotice));
+}
+function showCancelSlotNotice(){
+  const s=currentSettings||fallbackSettings;
+  const contact=String(s.host_contact||'').trim();
+  const zalo=String(s.zalo_url||'').trim();
+  const dlg=$('#cancelSlotDialog');
+  $('#cancelHostContact').textContent=contact||'Vui lòng liên hệ Host TBY';
+  const callBtn=$('#cancelCallBtn');
+  const digits=contact.replace(/[^0-9+]/g,'');
+  if(contact && digits){
+    callBtn.href=`tel:${digits}`;
+    callBtn.hidden=false;
+  }else callBtn.hidden=true;
+  const zaloBtn=$('#cancelZaloBtn');
+  if(zalo){
+    zaloBtn.href=zalo;
+    zaloBtn.hidden=false;
+  }else zaloBtn.hidden=true;
+  dlg?.showModal();
 }
 $('#registrationLookupBtn')?.addEventListener('click',lookupRegistration);
 $('#registrationLookupInput')?.addEventListener('keydown',e=>{if(e.key==='Enter')lookupRegistration();});
@@ -823,3 +844,6 @@ window.addEventListener('pageshow',()=>{
     try{dlg.close();}catch(e){}
   }
 });
+
+document.querySelectorAll('[data-close-cancel]').forEach(btn=>btn.addEventListener('click',()=>$('#cancelSlotDialog')?.close()));
+$('#cancelSlotDialog')?.addEventListener('click',e=>{if(e.target.id==='cancelSlotDialog')e.currentTarget.close();});
