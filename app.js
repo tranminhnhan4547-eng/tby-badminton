@@ -812,11 +812,6 @@ function showCancelSlotNotice(){
     callBtn.href=`tel:${digits}`;
     callBtn.hidden=false;
   }else callBtn.hidden=true;
-  const zaloBtn=$('#cancelZaloBtn');
-  if(zalo){
-    zaloBtn.href=zalo;
-    zaloBtn.hidden=false;
-  }else zaloBtn.hidden=true;
   dlg?.showModal();
 }
 $('#registrationLookupBtn')?.addEventListener('click',lookupRegistration);
