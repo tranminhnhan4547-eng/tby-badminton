@@ -266,7 +266,15 @@ async function syncAuth(){
   currentAdminUser=user;currentAdminRole=adminRow.role||'admin';$('#adminPane').hidden=false;$('#adminIdentity').textContent=`${user.email||'Quản lý'} · ${currentAdminRole.toUpperCase()}`;
   $('#eventEditorSection').hidden=currentAdminRole==='moderator';
   $('#eOpen').disabled=currentAdminRole!=='owner';$('#eOpenHint').textContent=currentAdminRole==='owner'?'(Bạn có quyền đóng/mở đăng ký)':'(Chỉ Owner được đóng/mở đăng ký)';
-  if(currentAdminRole==='owner'){$('#ownerSection').hidden=false;$('#siteSettingsSection').hidden=false;$('#videoAdminSection').hidden=false;await Promise.all([loadOwnerAccess(),populateSettingsForm(),loadAdminVideos()]);}
+  if(currentAdminRole==='owner'){
+    $('#ownerSection').hidden=false;
+    $('#siteSettingsSection').hidden=false;
+    await Promise.all([loadOwnerAccess(),populateSettingsForm()]);
+  }
+  if(currentAdminRole==='owner'||currentAdminRole==='admin'){
+    $('#videoAdminSection').hidden=false;
+    await loadAdminVideos();
+  }
   await loadAdminEvents();
 }
 // Điền lại email gần nhất để đăng nhập trên điện thoại nhanh hơn.
@@ -612,7 +620,7 @@ function adminVideoPreview(v){
   return `<div class="video-platform-preview">${esc(label)}</div>`;
 }
 async function loadAdminVideos(){
-  if(currentAdminRole!=='owner')return;
+  if(!['owner','admin'].includes(currentAdminRole))return;
   const root=$('#videoAdminList');root.innerHTML='<div class="admin-empty">Đang tải video…</div>';
   const {data,error}=await supabase.from('team_videos').select('*').order('sort_order').order('created_at',{ascending:false});
   if(error){root.innerHTML=`<div class="admin-empty">${esc(error.message)}</div>`;return;}
@@ -648,7 +656,7 @@ if(videoSourceType){
 
 $('#videoUploadForm').addEventListener('submit',async ev=>{
   ev.preventDefault();
-  if(currentAdminRole!=='owner')return alert('Chỉ Owner được thêm video.');
+  if(!['owner','admin'].includes(currentAdminRole))return alert('Chỉ Owner/Admin được thêm video.');
 
   const mode=$('#videoSourceType')?.value||'upload';
   const file=$('#videoFile').files[0];
@@ -707,7 +715,7 @@ $('#videoUploadForm').addEventListener('submit',async ev=>{
 });
 
 async function toggleVideoVisibility(id,isVisible){
-  if(currentAdminRole!=='owner')return;
+  if(!['owner','admin'].includes(currentAdminRole))return;
   const {error}=await supabase.from('team_videos').update({is_visible:!isVisible,updated_at:new Date().toISOString()}).eq('id',id);
   if(error)return alert(error.message);
   await Promise.all([loadTeamVideos(),loadAdminVideos()]);
