@@ -77,6 +77,7 @@ async function loadEvents(){
   for(const event of data)event.google_maps_url=mapLinks.get(event.id)||'';
   root.innerHTML=data.map(eventCard).join('');
   root.querySelectorAll('[data-register]').forEach(btn=>btn.addEventListener('click',()=>openRegister(btn.dataset.register)));
+  root.querySelectorAll('[data-cancel-contact]').forEach(btn=>btn.addEventListener('click',showCancelSlotNotice));
   root.querySelectorAll('[data-player-toggle]').forEach(btn=>btn.addEventListener('click',()=>{
     const list=btn.closest('[data-player-list]');
     if(!list)return;
@@ -152,6 +153,7 @@ function eventCard(e){
           </div>
         </div>
 
+        <button type="button" class="btn event-cancel-contact-mobile" data-cancel-contact>❌ Hủy slot</button>
         <button class="btn btn-primary event-register-mobile" data-register="${e.id}" ${open?'':'disabled'}>${buttonText}</button>
       </div>
 
@@ -171,6 +173,7 @@ return `<div class="player ${i>=3?'player-extra':''}">
             }).join(''):'<span class="muted">Chưa có người đăng ký.</span>'}
           </div>
         </div>
+        <button type="button" class="btn event-cancel-contact-desktop" data-cancel-contact>❌ Hủy slot</button>
         <button class="btn btn-primary event-register-desktop" data-register="${e.id}" ${open?'':'disabled'}>${buttonText}</button>
       </aside>
     </div>

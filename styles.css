@@ -939,3 +939,31 @@
 .cancel-host-contact strong{display:block;margin-top:5px;font-size:22px;color:#07385f}
 .cancel-slot-actions{display:flex;gap:9px;justify-content:center;flex-wrap:wrap}
 @media(max-width:560px){.cancel-slot-card{padding:25px 18px 20px}.cancel-slot-actions .btn{width:100%}}
+
+
+/* Hủy slot tại danh sách người đã đăng ký:
+   chỉ mở popup liên hệ Host, KHÔNG xóa dữ liệu */
+.event-cancel-contact-desktop,
+.event-cancel-contact-mobile{
+  background:#fff4f4;
+  color:#b42318;
+  border:1px solid #ffd1d1;
+  font-weight:800;
+}
+.event-cancel-contact-desktop:hover,
+.event-cancel-contact-mobile:hover{
+  background:#ffe9e9;
+}
+.event-cancel-contact-desktop{
+  width:100%;
+  margin:10px 0 8px;
+}
+.event-cancel-contact-mobile{
+  display:none!important;
+  width:100%;
+  margin-top:14px;
+}
+@media(max-width:860px){
+  .event-cancel-contact-desktop{display:none!important}
+  .event-cancel-contact-mobile{display:block!important}
+}
