@@ -326,6 +326,36 @@
     </div>
   </dialog>
 
+
+  <dialog id="editVideoDialog" class="video-edit-dialog">
+    <form id="editVideoForm" class="video-edit-card">
+      <button type="button" class="video-edit-close" data-close-video-edit aria-label="Đóng">×</button>
+      <div class="video-edit-head">
+        <div class="video-edit-icon">✏️</div>
+        <div>
+          <span class="kicker">OWNER / ADMIN</span>
+          <h2>Sửa video</h2>
+          <p id="editVideoSourceLabel"></p>
+        </div>
+      </div>
+
+      <label>Tiêu đề video
+        <input id="editVideoTitle" type="text" maxlength="120" placeholder="Video TBY" required>
+      </label>
+
+      <label id="editVideoLinkWrap">Link video
+        <input id="editVideoLink" type="url" placeholder="https://..." autocomplete="off">
+        <small>YouTube / TikTok / Facebook Reel.</small>
+      </label>
+
+      <div id="editVideoMsg" class="form-msg"></div>
+      <div class="video-edit-actions">
+        <button type="button" class="btn btn-ghost" data-close-video-edit>Hủy</button>
+        <button id="editVideoSaveBtn" type="submit" class="btn btn-primary">✓ Lưu thay đổi</button>
+      </div>
+    </form>
+  </dialog>
+
   <script src="./config.js"></script>
   <script type="module" src="./app.js"></script>
 </body>

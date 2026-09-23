@@ -974,3 +974,41 @@
   color:#075eb5;
   border-color:#d8eaff;
 }
+
+/* ===== Modal sửa video đẹp hơn ===== */
+.video-edit-dialog{
+  width:min(92vw,620px);max-width:620px;border:0;padding:0;background:transparent;
+}
+.video-edit-dialog::backdrop{
+  background:rgba(5,28,48,.58);backdrop-filter:blur(6px);
+}
+.video-edit-card{
+  position:relative;background:#fff;border:1px solid #dce9f5;border-radius:26px;
+  padding:28px;box-shadow:0 28px 90px rgba(0,34,63,.28);
+}
+.video-edit-close{
+  position:absolute;right:16px;top:16px;width:40px;height:40px;border:0;border-radius:50%;
+  background:#edf5fb;color:#092e50;font-size:26px;line-height:1;cursor:pointer;
+}
+.video-edit-head{display:flex;align-items:center;gap:14px;padding-right:45px;margin-bottom:22px}
+.video-edit-icon{
+  width:52px;height:52px;border-radius:16px;display:grid;place-items:center;
+  background:#eaf5ff;font-size:24px;flex:0 0 auto;
+}
+.video-edit-head h2{margin:2px 0 3px;font-size:26px;color:#082d4d}
+.video-edit-head p{margin:0;color:#6c8194;font-size:14px}
+.video-edit-card label{display:block;font-weight:800;color:#102f49;margin-top:15px}
+.video-edit-card input{
+  display:block;width:100%;box-sizing:border-box;margin-top:8px;padding:13px 14px;
+  border:1px solid #cbddeb;border-radius:13px;background:#fbfdff;font:inherit;outline:none;
+}
+.video-edit-card input:focus{border-color:#1687d9;box-shadow:0 0 0 4px rgba(22,135,217,.10)}
+.video-edit-card small{display:block;margin-top:7px;color:#7890a4;font-weight:500}
+.video-edit-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:24px}
+.video-edit-actions .btn{min-width:130px}
+@media(max-width:560px){
+  .video-edit-card{padding:23px 18px 18px;border-radius:22px}
+  .video-edit-head h2{font-size:23px}
+  .video-edit-actions{flex-direction:column-reverse}
+  .video-edit-actions .btn{width:100%}
+}

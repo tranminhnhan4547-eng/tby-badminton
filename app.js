@@ -716,33 +716,76 @@ $('#videoUploadForm').addEventListener('submit',async ev=>{
   btn.disabled=false;btn.textContent='Thêm video';
 });
 
-async function editTeamVideo(id,rows){
+let editingVideoRow=null;
+
+function editTeamVideo(id,rows){
   if(!['owner','admin'].includes(currentAdminRole))return;
   const v=(rows||[]).find(x=>String(x.id)===String(id));
   if(!v)return alert('Không tìm thấy video.');
+  editingVideoRow=v;
 
-  const title=prompt('Tiêu đề video:',v.title||'Video TBY');
-  if(title===null)return;
-  const cleanTitle=title.trim()||'Video TBY';
-  const patch={title:cleanTitle,updated_at:new Date().toISOString()};
+  $('#editVideoTitle').value=v.title||'Video TBY';
+  const isUpload=(v.source_type||'upload')==='upload';
+  $('#editVideoLinkWrap').hidden=isUpload;
+  $('#editVideoLink').value=isUpload?'':(v.source_url||v.video_url||'');
+  $('#editVideoSourceLabel').textContent=isUpload
+    ? 'Video upload trực tiếp · chỉ sửa tiêu đề'
+    : `${(v.source_type||'link').toUpperCase()} · có thể sửa tiêu đề và link`;
+  $('#editVideoMsg').textContent='';
+  $('#editVideoMsg').className='form-msg';
+  $('#editVideoDialog')?.showModal();
+}
+
+$('#editVideoForm')?.addEventListener('submit',async ev=>{
+  ev.preventDefault();
+  if(!editingVideoRow||!['owner','admin'].includes(currentAdminRole))return;
+
+  const v=editingVideoRow;
+  const patch={
+    title:$('#editVideoTitle').value.trim()||'Video TBY',
+    updated_at:new Date().toISOString()
+  };
 
   if((v.source_type||'upload')!=='upload'){
-    const current=v.source_url||v.video_url||'';
-    const link=prompt('Link video:',current);
-    if(link===null)return;
-    const cleanLink=link.trim();
-    if(!cleanLink)return alert('Link video không được để trống.');
-    const platform=getVideoPlatform(cleanLink);
-    if(!['youtube','tiktok','facebook'].includes(platform))return alert('Hiện hỗ trợ link YouTube, TikTok hoặc Facebook.');
+    const link=$('#editVideoLink').value.trim();
+    if(!link){
+      $('#editVideoMsg').className='form-msg err';
+      $('#editVideoMsg').textContent='Link video không được để trống.';
+      return;
+    }
+    const platform=getVideoPlatform(link);
+    if(!['youtube','tiktok','facebook'].includes(platform)){
+      $('#editVideoMsg').className='form-msg err';
+      $('#editVideoMsg').textContent='Hiện hỗ trợ link YouTube, TikTok hoặc Facebook.';
+      return;
+    }
     patch.source_type=platform;
-    patch.source_url=cleanLink;
-    patch.video_url=cleanLink;
+    patch.source_url=link;
+    patch.video_url=link;
   }
 
-  const {error}=await supabase.from('team_videos').update(patch).eq('id',id);
-  if(error)return alert(error.message);
+  const btn=$('#editVideoSaveBtn');
+  btn.disabled=true;btn.textContent='Đang lưu…';
+  const {error}=await supabase.from('team_videos').update(patch).eq('id',v.id);
+  btn.disabled=false;btn.textContent='Lưu thay đổi';
+
+  if(error){
+    $('#editVideoMsg').className='form-msg err';
+    $('#editVideoMsg').textContent=error.message;
+    return;
+  }
+  $('#editVideoDialog')?.close();
+  editingVideoRow=null;
   await Promise.all([loadTeamVideos(),loadAdminVideos()]);
-}
+});
+
+document.querySelectorAll('[data-close-video-edit]').forEach(b=>b.addEventListener('click',()=>{
+  $('#editVideoDialog')?.close();
+  editingVideoRow=null;
+}));
+$('#editVideoDialog')?.addEventListener('click',e=>{
+  if(e.target.id==='editVideoDialog'){e.currentTarget.close();editingVideoRow=null;}
+});
 
 async function toggleVideoVisibility(id,isVisible){
   if(!['owner','admin'].includes(currentAdminRole))return;
