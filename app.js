@@ -721,7 +721,7 @@ async function toggleVideoVisibility(id,isVisible){
   await Promise.all([loadTeamVideos(),loadAdminVideos()]);
 }
 async function deleteTeamVideo(id,url,type='upload'){
-  if(currentAdminRole!=='owner'||!confirm('Xóa video này khỏi TBY?'))return;
+  if(!['owner','admin'].includes(currentAdminRole)||!confirm('Xóa video này khỏi TBY?'))return;
   const {error}=await supabase.from('team_videos').delete().eq('id',id);
   if(error)return alert(error.message);
   if(type==='upload'&&url) await removeMediaUrl(url);
