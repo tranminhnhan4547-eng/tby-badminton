@@ -632,11 +632,13 @@ async function loadAdminVideos(){
       <div class="video-admin-preview">${adminVideoPreview(v)}</div>
       <div class="who"><strong>${esc(v.title||'Video TBY')}</strong><span>${esc(srcLabel)} · ${v.is_visible?'Đang hiển thị':'Đang ẩn'} · ${new Date(v.created_at).toLocaleString('vi-VN')}</span></div>
       <div class="manager-actions">
+        <button class="btn btn-ghost btn-sm" data-video-edit="${v.id}">✏️ Sửa</button>
         <button class="btn btn-ghost btn-sm" data-video-toggle="${v.id}" data-visible="${!!v.is_visible}">${v.is_visible?'Ẩn video':'Hiện video'}</button>
         <button class="btn btn-danger btn-sm" data-video-delete="${v.id}" data-url="${esc(v.video_url||'')}" data-type="${esc(type)}">Xóa</button>
       </div>
     </article>`;
   }).join('');
+  root.querySelectorAll('[data-video-edit]').forEach(b=>b.addEventListener('click',()=>editTeamVideo(b.dataset.videoEdit,data)));
   root.querySelectorAll('[data-video-toggle]').forEach(b=>b.addEventListener('click',()=>toggleVideoVisibility(b.dataset.videoToggle,b.dataset.visible==='true')));
   root.querySelectorAll('[data-video-delete]').forEach(b=>b.addEventListener('click',()=>deleteTeamVideo(b.dataset.videoDelete,b.dataset.url,b.dataset.type)));
 }
@@ -713,6 +715,34 @@ $('#videoUploadForm').addEventListener('submit',async ev=>{
 
   btn.disabled=false;btn.textContent='Thêm video';
 });
+
+async function editTeamVideo(id,rows){
+  if(!['owner','admin'].includes(currentAdminRole))return;
+  const v=(rows||[]).find(x=>String(x.id)===String(id));
+  if(!v)return alert('Không tìm thấy video.');
+
+  const title=prompt('Tiêu đề video:',v.title||'Video TBY');
+  if(title===null)return;
+  const cleanTitle=title.trim()||'Video TBY';
+  const patch={title:cleanTitle,updated_at:new Date().toISOString()};
+
+  if((v.source_type||'upload')!=='upload'){
+    const current=v.source_url||v.video_url||'';
+    const link=prompt('Link video:',current);
+    if(link===null)return;
+    const cleanLink=link.trim();
+    if(!cleanLink)return alert('Link video không được để trống.');
+    const platform=getVideoPlatform(cleanLink);
+    if(!['youtube','tiktok','facebook'].includes(platform))return alert('Hiện hỗ trợ link YouTube, TikTok hoặc Facebook.');
+    patch.source_type=platform;
+    patch.source_url=cleanLink;
+    patch.video_url=cleanLink;
+  }
+
+  const {error}=await supabase.from('team_videos').update(patch).eq('id',id);
+  if(error)return alert(error.message);
+  await Promise.all([loadTeamVideos(),loadAdminVideos()]);
+}
 
 async function toggleVideoVisibility(id,isVisible){
   if(!['owner','admin'].includes(currentAdminRole))return;

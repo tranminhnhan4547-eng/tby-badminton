@@ -967,3 +967,10 @@
   .event-cancel-contact-desktop{display:none!important}
   .event-cancel-contact-mobile{display:block!important}
 }
+
+/* Nút Sửa video */
+.video-admin-row .manager-actions [data-video-edit]{
+  background:#eef6ff;
+  color:#075eb5;
+  border-color:#d8eaff;
+}
